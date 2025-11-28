@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:predictive_back_gesture/predictive_back_gesture.dart';
 import 'batch_edit_page.dart';
 
 void main() async {
@@ -84,12 +83,10 @@ class _MyAppState extends State<MyApp> {
                 ),
             scaffoldBackgroundColor: Colors.black,
           ),
-          home: BackGestureDetector(
-            child: MyHomePage(
-              title: '音乐标签编辑',
-              isDarkMode: _isDarkMode,
-              toggleTheme: _toggleTheme,
-            ),
+          home: MyHomePage(
+            title: '音乐标签编辑',
+            isDarkMode: _isDarkMode,
+            toggleTheme: _toggleTheme,
           ),
         );
       },

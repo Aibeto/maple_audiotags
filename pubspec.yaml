@@ -36,7 +36,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   dynamic_color: ^1.7.0
   shared_preferences: ^2.3.0
-  predictive_back_gesture: ^0.5.0
 
 dev_dependencies:
   flutter_test:
