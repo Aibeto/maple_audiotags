@@ -20,6 +20,8 @@ import 'package:path_provider/path_provider.dart';
 import 'batch_edit_page.dart';
 // 导入标签编辑
 import 'edit.dart';
+// 导入标签编辑UI
+import 'tag_editor_ui.dart';
 // 导入Toast库
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -246,12 +248,18 @@ class _MyHomePageState extends State<MyHomePage> {
             print('读取到的标签: $tags');
           }
           
-          // 显示Toast通知用户文件已复制并显示标签信息
-          if (mounted) {
+          // 如果成功读取标签，则导航到标签编辑界面
+          if (tags != null && mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TagEditorUI(tag: tags, filePath: targetPath),
+              ),
+            );
+          } else if (mounted) {
+            // 显示Toast通知用户文件已复制但未能读取标签信息
             Fluttertoast.showToast(
-              msg: tags != null 
-                ? '已读取文件标签: ${tags.title ?? "未知标题"} - ${tags.trackArtist ?? "未知艺术家"}' 
-                : '文件已复制到缓存，但未能读取标签信息',
+              msg: '文件已复制到缓存，但未能读取标签信息',
               toastLength: Toast.LENGTH_LONG,
               gravity: ToastGravity.BOTTOM,
             );
@@ -346,8 +354,19 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           // 子组件列表
           children: <Widget>[
-
-
+            const Icon(
+              Icons.music_note,
+              size: 100,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              '选择一个音频文件开始编辑标签',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey,
+              ),
+            ),
           ],
         ),
       ),

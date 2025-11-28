@@ -35,11 +35,35 @@ class _TagEditorUIState extends State<TagEditorUI> {
   /// 控制器用于编辑专辑
   late TextEditingController _albumController;
 
+  /// 控制器用于编辑专辑艺术家
+  late TextEditingController _albumArtistController;
+
   /// 控制器用于编辑年份
   late TextEditingController _yearController;
 
+  /// 控制器用于编辑流派
+  late TextEditingController _genreController;
+
   /// 控制器用于编辑曲目号
   late TextEditingController _trackNumberController;
+
+  /// 控制器用于编辑曲目总数
+  late TextEditingController _trackTotalController;
+
+  /// 控制器用于编辑光盘号
+  late TextEditingController _discNumberController;
+
+  /// 控制器用于编辑光盘总数
+  late TextEditingController _discTotalController;
+
+  /// 控制器用于编辑歌词
+  late TextEditingController _lyricsController;
+
+  /// 控制器用于编辑持续时间
+  late TextEditingController _durationController;
+
+  /// 控制器用于编辑BPM
+  late TextEditingController _bpmController;
 
   /// 表单键，用于验证和保存表单
   final _formKey = GlobalKey<FormState>();
@@ -52,8 +76,16 @@ class _TagEditorUIState extends State<TagEditorUI> {
     _titleController = TextEditingController(text: widget.tag.title);
     _artistController = TextEditingController(text: widget.tag.trackArtist);
     _albumController = TextEditingController(text: widget.tag.album);
-    _yearController = TextEditingController(text: widget.tag.year);
-    _trackNumberController = TextEditingController(text: widget.tag.trackNumber);
+    _albumArtistController = TextEditingController(text: widget.tag.albumArtist);
+    _yearController = TextEditingController(text: widget.tag.year?.toString());
+    _genreController = TextEditingController(text: widget.tag.genre);
+    _trackNumberController = TextEditingController(text: widget.tag.trackNumber?.toString());
+    _trackTotalController = TextEditingController(text: widget.tag.trackTotal?.toString());
+    _discNumberController = TextEditingController(text: widget.tag.discNumber?.toString());
+    _discTotalController = TextEditingController(text: widget.tag.discTotal?.toString());
+    _lyricsController = TextEditingController(text: widget.tag.lyrics);
+    _durationController = TextEditingController(text: widget.tag.duration?.toString());
+    _bpmController = TextEditingController(text: widget.tag.bpm?.toString());
   }
 
   @override
@@ -62,8 +94,16 @@ class _TagEditorUIState extends State<TagEditorUI> {
     _titleController.dispose();
     _artistController.dispose();
     _albumController.dispose();
+    _albumArtistController.dispose();
     _yearController.dispose();
+    _genreController.dispose();
     _trackNumberController.dispose();
+    _trackTotalController.dispose();
+    _discNumberController.dispose();
+    _discTotalController.dispose();
+    _lyricsController.dispose();
+    _durationController.dispose();
+    _bpmController.dispose();
     super.dispose();
   }
 
@@ -179,6 +219,22 @@ class _TagEditorUIState extends State<TagEditorUI> {
                 ),
               ),
               const SizedBox(height: 16),
+              TextFormField(
+                controller: _albumArtistController,
+                decoration: const InputDecoration(
+                  labelText: '专辑艺术家',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _genreController,
+                decoration: const InputDecoration(
+                  labelText: '流派',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -204,14 +260,84 @@ class _TagEditorUIState extends State<TagEditorUI> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              Center(
-                child: ElevatedButton.icon(
-                  onPressed: _saveTags,
-                  icon: const Icon(Icons.save),
-                  label: const Text('保存标签'),
-                ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _trackTotalController,
+                      decoration: const InputDecoration(
+                        labelText: '曲目总数',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _discNumberController,
+                      decoration: const InputDecoration(
+                        labelText: '光盘号',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _discTotalController,
+                      decoration: const InputDecoration(
+                        labelText: '光盘总数',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _durationController,
+                      decoration: const InputDecoration(
+                        labelText: '持续时间(秒)',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _bpmController,
+                decoration: const InputDecoration(
+                  labelText: 'BPM(每分钟节拍数)',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _lyricsController,
+                decoration: const InputDecoration(
+                  labelText: '歌词',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 50,
+              ),
+              // const SizedBox(height: 24),
+              // Center(
+              //   child: ElevatedButton.icon(
+              //     onPressed: _saveTags,
+              //     icon: const Icon(Icons.save),
+              //     label: const Text('保存标签'),
+              //   ),
+              // ),
             ],
           ),
         ),
