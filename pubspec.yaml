@@ -36,7 +36,10 @@ dependencies:
   cupertino_icons: ^1.0.8
   dynamic_color: ^1.7.0
   shared_preferences: ^2.3.0
-  velocity_x: ^4.1.2
+  file_picker: ^10.3.7
+  path_provider: ^2.1.5
+  audiotags: ^1.4.5
+  fluttertoast: ^8.2.8
 
 dev_dependencies:
   flutter_test:
