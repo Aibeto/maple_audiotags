@@ -40,6 +40,8 @@ dependencies:
   path_provider: ^2.1.5
   audiotags: ^1.4.5
   fluttertoast: ^8.2.8
+  permission_handler: ^11.3.1
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

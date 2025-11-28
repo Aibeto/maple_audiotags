@@ -1,4 +1,6 @@
 // 导入audiotags包，用于处理音频文件标签
+import 'dart:io';
+
 import 'package:audiotags/audiotags.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +13,8 @@ Future<Tag?> readAudioTags(String filePath) async {
   try {
     if (kDebugMode) {
       print('尝试读取音频标签，文件路径: $filePath');
+      print('KDEBUG: 文件是否存在: ${await File(filePath).exists()}');
+      print('KDEBUG: 文件大小: ${await File(filePath).length()} 字节');
     }
     final tag = await AudioTags.read(filePath);
     if (kDebugMode) {

@@ -25,6 +25,12 @@ import 'tag_editor_ui.dart';
 // 导入Toast库
 import 'package:fluttertoast/fluttertoast.dart';
 
+// 导入日期格式化库
+import 'package:intl/intl.dart';
+
+// 导入MethodChannel用于与原生通信
+import 'package:flutter/services.dart';
+
 // 程序入口点，使用async关键字支持异步操作
 void main() async {
   // 确保Flutter框架初始化完成
@@ -181,6 +187,8 @@ class MyHomePage extends StatefulWidget {
 
 // 音频标签编辑器主页状态管理类，继承自State
 class _MyHomePageState extends State<MyHomePage> {
+  // 创建与原生通信的MethodChannel
+  static const platform = MethodChannel('aibeto.maple.audiotags/filepath');
 
   // 选择音乐文件的方法
   void _selectMusicFile() async {
@@ -202,6 +210,21 @@ class _MyHomePageState extends State<MyHomePage> {
       // 检查文件路径是否存在
       if (file.path != null) {
         try {
+          // 尝试获取真实文件路径（仅在Android上）
+          String? realPath;
+          if (Platform.isAndroid) {
+            try {
+              realPath = await platform.invokeMethod('getRealPathFromUri', {'uri': file.path});
+              if (kDebugMode) {
+                print('KDEBUG: 尝试获取真实路径: $realPath');
+              }
+            } catch (e) {
+              if (kDebugMode) {
+                print('KDEBUG: 获取真实路径失败: $e');
+              }
+            }
+          }
+          
           // 显示进度对话框
           showDialog(
             context: context,
@@ -223,14 +246,37 @@ class _MyHomePageState extends State<MyHomePage> {
           
           // 获取应用缓存目录
           Directory cacheDir = await getTemporaryDirectory();
-          // 构建目标文件路径
-          String targetPath = path.join(cacheDir.path, file.name);
+          // 获取当前日期作为文件夹名称
+          String dateFolder = DateFormat('yyyyMMdd').format(DateTime.now());
+          // 构建带日期的缓存目录路径
+          String datedCacheDirPath = path.join(cacheDir.path, 'audio_cache', dateFolder);
+          // 创建带日期的缓存目录
+          Directory datedCacheDir = Directory(datedCacheDirPath);
+          if (!await datedCacheDir.exists()) {
+            await datedCacheDir.create(recursive: true);
+          }
           
-          // 创建目标文件对象
-          // File targetFile = File(targetPath);
+          // 构建原始文件的目标路径（加上"_original"后缀）
+          String originalFileName = '${path.basenameWithoutExtension(file.name)}_original${path.extension(file.name)}';
+          String targetPath = path.join(datedCacheDirPath, originalFileName);
+          
+          if (kDebugMode) {
+            print('KDEBUG: file_picker返回的路径(可能是缓存路径): ${file.path}');
+            if (realPath != null) {
+              print('KDEBUG: 获取到的真实文件路径: $realPath');
+            }
+            print('KDEBUG: 带日期的缓存目录: $datedCacheDirPath');
+            print('KDEBUG: 原始文件在缓存中的路径: $targetPath');
+          }
           
           // 将选中的文件复制到缓存目录，覆盖已存在的同名文件
           await File(file.path!).copy(targetPath);
+          
+          if (kDebugMode) {
+            print('KDEBUG: 原始文件已成功复制到缓存');
+            print('KDEBUG: 缓存中的原始文件是否存在: ${await File(targetPath).exists()}');
+            print('KDEBUG: 缓存中的原始文件大小: ${await File(targetPath).length()} 字节');
+          }
           
           // 关闭进度对话框
           Navigator.of(context).pop();
@@ -238,22 +284,21 @@ class _MyHomePageState extends State<MyHomePage> {
           // 调用edit.dart中的函数读取音频标签
           final tags = await readAudioTags(targetPath);
           
-          // 添加调试信息
-          if (kDebugMode) {
-            if (kDebugMode) {
-              print('文件路径: $targetPath');
-            }
-          }
           if (kDebugMode) {
             print('读取到的标签: $tags');
           }
           
           // 如果成功读取标签，则导航到标签编辑界面
+          // 传递缓存中的原始文件路径和真实路径（如果有的话）
           if (tags != null && mounted) {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => TagEditorUI(tag: tags, filePath: targetPath),
+                builder: (context) => TagEditorUI(
+                  tag: tags, 
+                  filePath: targetPath, // 使用缓存中的原始文件路径
+                  realFilePath: realPath, // 传递真实文件路径（如果有）
+                ),
               ),
             );
           } else if (mounted) {
