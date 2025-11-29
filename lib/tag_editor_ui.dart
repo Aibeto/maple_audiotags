@@ -930,19 +930,16 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       extensions: ['jpg', 'jpeg', 'png', 'bmp', 'gif'],
     );
     
-    final List<XFile> files = await openFiles(
+    final XFile? selectedFile = await openFile(
       acceptedTypeGroups: [typeGroup],
       confirmButtonText: '选择图片文件',
     );
     
     // 检查用户是否选择了文件
-    if (files.isEmpty) {
+    if (selectedFile == null) {
       // 用户取消了选择
       return;
     }
-    
-    // 只处理第一个文件
-    final XFile selectedFile = files.first;
     
     try {
       // 直接读取文件内容为字节

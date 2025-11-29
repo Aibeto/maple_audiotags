@@ -278,19 +278,20 @@ class _MyHomePageState extends State<MyHomePage> {
         extensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'],
       );
       
-      final List<XFile> files = await openFiles(
+      final XFile? selectedFile = await openFile(
         acceptedTypeGroups: [typeGroup],
         confirmButtonText: '选择音频文件',
       );
       
       // 检查用户是否选择了文件
-      if (files.isEmpty) {
+      if (selectedFile == null) {
         // 用户取消了选择
         return;
       }
       
-      // 只处理第一个文件（因为我们希望是单文件选择）
-      final XFile selectedFile = files.first;
+      final String fileName = path.basename(selectedFile.path);
+      // 记录原始文件路径
+      final String originalFilePath = selectedFile.path;
       final String fileName = path.basename(selectedFile.path);
       // 记录原始文件路径
       final String originalFilePath = selectedFile.path;
