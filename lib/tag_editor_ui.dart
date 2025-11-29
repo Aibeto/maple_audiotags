@@ -4,10 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_selector/file_selector.dart';
 
-import 'dart:io' show Platform, File;
+import 'dart:io' show Platform, File, Directory;
 import 'package:path/path.dart' as path;
 import 'package:intl/intl.dart';
 
@@ -142,11 +143,8 @@ class _TagEditorUIState extends State<TagEditorUI> {
           },
         );
 
-        // 无条件使用文件保存器让用户选择保存位置
-        if (mounted) {
-          Navigator.of(context).pop(); // 关闭进度对话框
-        }
-        await _saveWithFileSaver();
+        // 直接保存到当前编辑的文件
+        await _saveDirectly();
         return;
       } on PlatformException catch (e) {
         // 关闭进度对话框
@@ -184,8 +182,8 @@ class _TagEditorUIState extends State<TagEditorUI> {
     }
   }
 
-  /// 使用系统文件保存器的回退保存方法
-  Future<void> _saveWithFileSaver() async {
+  /// 直接保存标签到当前文件，并提供选项将文件保存到用户指定位置
+  Future<void> _saveDirectly() async {
     try {
       // 创建新的标签对象
       final updatedTag = Tag(
@@ -205,28 +203,56 @@ class _TagEditorUIState extends State<TagEditorUI> {
         pictures: widget.tag.pictures, // 保持原始图片
       );
 
-      // 确定要写入的文件路径 - 优先使用真实文件路径
-      String targetFilePath = widget.realFilePath ?? widget.filePath;
+      // 直接将标签写入当前编辑的文件（即widget.filePath）
+      await AudioTags.write(widget.filePath, updatedTag);
       
       if (kDebugMode) {
-        print('KDEBUG: 使用备用文件保存方法');
-        print('KDEBUG: 正在将标签写入文件: $targetFilePath');
+        print('KDEBUG: 标签已直接写入文件: ${widget.filePath}');
       }
+      
+      // 保存后使用文件保存器将文件复制到用户选择的位置
+      await _saveWithFileSaver();
+    } catch (e) {
+      if (kDebugMode) {
+        print('直接保存标签失败: $e');
+      }
+      if (mounted) {
+        Navigator.of(context).pop(); // 关闭进度对话框
+        
+        if (kDebugMode) {
+          print('KDEBUG: 保存失败: $e');
+        }
+        Fluttertoast.showToast(
+          msg: '保存失败: $e',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
+    }
+  }
 
-      // 先将标签写入目标文件
-      await AudioTags.write(targetFilePath, updatedTag);
-      
-      if (kDebugMode) {
-        print('KDEBUG: 标签已写入文件，现在提示用户选择保存位置');
-      }
-      
+  /// 使用系统文件保存器将缓存中的文件复制到用户选择的位置
+  Future<void> _saveWithFileSaver() async {
+    try {
       // 获取当前时间戳
       String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       // 获取文件名（不含扩展名）和扩展名
-      String fileNameWithoutExtension = path.basenameWithoutExtension(targetFilePath);
-      String fileExtension = path.extension(targetFilePath);
+      String fileNameWithoutExtension = path.basenameWithoutExtension(widget.filePath);
+      String fileExtension = path.extension(widget.filePath);
       // 构建带时间戳的文件名
       String timestampedFileName = '${fileNameWithoutExtension}_modified_${timestamp}$fileExtension';
+      
+      if (kDebugMode) {
+        print('KDEBUG: 准备使用文件保存器保存文件');
+        print('KDEBUG: 建议的文件名: $timestampedFileName');
+      }
+      
+      // 检查是否在Android平台
+      if (Platform.isAndroid) {
+        // 在Android上使用替代方法保存文件
+        await _saveFileForAndroid(timestampedFileName);
+        return;
+      }
       
       // 使用文件选择器让用户选择保存位置
       final FileSaveLocation? outputFile = await getSaveLocation(
@@ -237,19 +263,20 @@ class _TagEditorUIState extends State<TagEditorUI> {
       if (outputFile != null) {
         if (kDebugMode) {
           print('KDEBUG: 用户选择的输出文件路径: $outputFile');
-          print('KDEBUG: 从目标文件复制: $targetFilePath');
+          print('KDEBUG: 从缓存文件复制: ${widget.filePath}');
         }
         
         // 将文件复制到用户选择的位置
-        final saveFile = XFile(targetFilePath);
+        final saveFile = XFile(widget.filePath);
         await saveFile.saveTo(outputFile as String);
         
         if (kDebugMode) {
           print('KDEBUG: 文件已成功复制到: $outputFile');
-          // 注意：由于这是文件系统路径，我们不能直接检查是否存在
         }
         
         if (mounted) {
+          Navigator.of(context).pop(); // 关闭进度对话框
+          
           // 显示成功消息
           Fluttertoast.showToast(
             msg: '文件已保存到: $outputFile',
@@ -260,6 +287,8 @@ class _TagEditorUIState extends State<TagEditorUI> {
       } else {
         // 用户取消了保存操作
         if (mounted) {
+          Navigator.of(context).pop(); // 关闭进度对话框
+          
           Fluttertoast.showToast(
             msg: '保存操作已取消',
             toastLength: Toast.LENGTH_SHORT,
@@ -271,17 +300,151 @@ class _TagEditorUIState extends State<TagEditorUI> {
           print('KDEBUG: 用户取消了保存操作');
         }
       }
+    } on UnimplementedError catch (e) {
+      // 处理getSaveLocation未实现的情况
+      if (kDebugMode) {
+        print('KDEBUG: getSaveLocation()未实现: $e');
+      }
+      
+      // 尝试使用Android的替代方法
+      if (Platform.isAndroid) {
+        String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        String fileNameWithoutExtension = path.basenameWithoutExtension(widget.filePath);
+        String fileExtension = path.extension(widget.filePath);
+        String timestampedFileName = '${fileNameWithoutExtension}_modified_${timestamp}$fileExtension';
+        
+        await _saveFileForAndroid(timestampedFileName);
+        return;
+      }
+      
+      if (mounted) {
+        Navigator.of(context).pop(); // 关闭进度对话框
+        
+        // 显示错误消息
+        Fluttertoast.showToast(
+          msg: '当前平台不支持文件保存器功能',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
     } catch (e) {
       if (kDebugMode) {
         print('使用文件保存器保存失败: $e');
       }
       if (mounted) {
+        Navigator.of(context).pop(); // 关闭进度对话框
+        
         Fluttertoast.showToast(
           msg: '保存失败: $e',
           toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
         );
       }
+    }
+  }
+  
+  /// Android平台的文件保存方法
+  Future<void> _saveFileForAndroid(String suggestedName) async {
+    try {
+      if (kDebugMode) {
+        print('KDEBUG: 使用Android平台文件保存方法');
+        print('KDEBUG: 建议的文件名: $suggestedName');
+      }
+      
+      // 检查并请求存储权限
+      bool hasPermission = await _requestStoragePermission();
+      if (!hasPermission) {
+        if (mounted) {
+          Navigator.of(context).pop(); // 关闭进度对话框
+          
+          Fluttertoast.showToast(
+            msg: '需要存储权限才能保存文件',
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+          );
+        }
+        return;
+      }
+      
+      // 使用Android默认的下载目录
+      String downloadPath = '/sdcard/Download/$suggestedName';
+      File targetFile = File(downloadPath);
+      
+      // 确保目录存在
+      await targetFile.create(recursive: true);
+      
+      if (kDebugMode) {
+        print('KDEBUG: 尝试将文件保存到: $downloadPath');
+      }
+      
+      // 将缓存文件复制到下载目录
+      File sourceFile = File(widget.filePath);
+      await sourceFile.copy(downloadPath);
+      
+      if (kDebugMode) {
+        print('KDEBUG: 文件已成功保存到: $downloadPath');
+      }
+      
+      if (mounted) {
+        Navigator.of(context).pop(); // 关闭进度对话框
+        
+        // 显示成功消息
+        Fluttertoast.showToast(
+          msg: '文件已保存到: $downloadPath',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('KDEBUG: Android平台文件保存失败: $e');
+      }
+      
+      if (mounted) {
+        Navigator.of(context).pop(); // 关闭进度对话框
+        
+        Fluttertoast.showToast(
+          msg: 'Android平台保存失败: $e',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
+    }
+  }
+  
+  /// 请求Android存储权限
+  Future<bool> _requestStoragePermission() async {
+    try {
+      // 检查Android版本
+      if (Platform.isAndroid) {
+        final androidVersion = int.tryParse(Platform.operatingSystemVersion.replaceAll(RegExp(r'[^\d.]'), '').split('.').first) ?? 0;
+        
+        if (androidVersion >= 11) {
+          // Android 11及以上版本使用MANAGE_EXTERNAL_STORAGE权限
+          var status = await Permission.manageExternalStorage.status;
+          if (!status.isGranted) {
+            // 请求MANAGE_EXTERNAL_STORAGE权限
+            status = await Permission.manageExternalStorage.request();
+            return status.isGranted;
+          }
+          return true;
+        } else {
+          // Android 10及以下版本使用传统存储权限
+          var status = await Permission.storage.status;
+          if (!status.isGranted) {
+            // 请求存储权限
+            status = await Permission.storage.request();
+            return status.isGranted;
+          }
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('KDEBUG: 权限请求失败: $e');
+      }
+      return false;
     }
   }
 
@@ -316,12 +479,6 @@ class _TagEditorUIState extends State<TagEditorUI> {
                   labelText: '标题',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '请输入标题';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -330,12 +487,6 @@ class _TagEditorUIState extends State<TagEditorUI> {
                   labelText: '艺术家',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '请输入艺术家';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
               TextFormField(
