@@ -5,6 +5,7 @@ import 'dart:async';
 // 添加这一行以引入pi常量
 import 'dart:io' show Platform, File;
 import 'dart:ui' as ui;
+import 'dart:math';
 
 import 'package:audiotags/audiotags.dart';
 import 'package:file_selector/file_selector.dart';
@@ -13,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 
@@ -103,6 +105,137 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   /// 图片刷新定时器
   // Timer? _refreshTimer; // 已移除，不再使用定时器刷新
 
+  /// 创建带液态玻璃效果背景的文本输入框组件
+  Widget _buildGlassTextFormField({
+    required TextEditingController controller,
+    required String labelText,
+    TextInputType keyboardType = TextInputType.text,
+    bool enabled = true,
+  }) {
+    return Container(
+      margin: const EdgeInsets.all(4.0),
+      child: Stack(
+        children: [
+          // 液态玻璃背景效果
+          Positioned.fill(
+            child: LiquidGlassLayer(
+              settings: LiquidGlassSettings(
+                thickness: 6,
+                blur: 0.5,
+                lightAngle: 0.3 * pi,
+                lightIntensity: 0.7,
+                ambientStrength: 0.2,
+                blend: 0.5,
+                refractiveIndex: 1.2,
+                chromaticAberration: 0.2,
+                saturation: 1.05,
+              ),
+              child: LiquidGlass.inLayer(
+                shape: LiquidRoundedRectangle(
+                  borderRadius: const Radius.circular(12.0),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.0),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.2)
+                        : Colors.white.withOpacity(0.2),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // 文本输入框
+          TextFormField(
+            controller: controller,
+            decoration: InputDecoration(
+              labelText: labelText,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.transparent, // 背景透明，显示液态玻璃效果
+            ),
+            keyboardType: keyboardType,
+            enabled: enabled,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 创建带液态玻璃效果背景的歌词输入框组件（多行文本）
+  Widget _buildGlassLyricsFormField() {
+    return Container(
+      margin: const EdgeInsets.all(4.0),
+      child: Stack(
+        children: [
+          // 液态玻璃背景效果
+          Positioned.fill(
+            child: LiquidGlassLayer(
+              settings: LiquidGlassSettings(
+                thickness: 6,
+                blur: 0.5,
+                lightAngle: 0.3 * pi,
+                lightIntensity: 0.7,
+                ambientStrength: 0.2,
+                blend: 0.5,
+                refractiveIndex: 1.2,
+                chromaticAberration: 0.2,
+                saturation: 1.05,
+              ),
+              child: LiquidGlass.inLayer(
+                shape: LiquidRoundedRectangle(
+                  borderRadius: const Radius.circular(12.0),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.0),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.2)
+                        : Colors.white.withOpacity(0.2),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // 歌词文本输入框
+          TextFormField(
+            controller: _lyricsController,
+            decoration: InputDecoration(
+              labelText: '歌词',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.transparent, // 背景透明，显示液态玻璃效果
+            ),
+            maxLines: null,
+            expands: true,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -153,6 +286,163 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     // 图片会在旋转动画中自然重新渲染，无需额外处理
   }
 
+  /// 创建带液态玻璃效果的对话框
+  Widget _buildGlassDialog({
+    Widget? title,
+    Widget? content,
+    List<Widget>? actions,
+  }) {
+    return Center(
+      child: LiquidGlassLayer(
+        settings: LiquidGlassSettings(
+          thickness: 15,
+          blur: 2.0,
+          lightAngle: 0.3 * pi,
+          lightIntensity: 0.7,
+          ambientStrength: 0.5,
+          blend: 0.7,
+          refractiveIndex: 1.5,
+          chromaticAberration: 0.5,
+          saturation: 1.2,
+        ),
+        child: LiquidGlass.inLayer(
+          shape: LiquidRoundedRectangle(
+            borderRadius: const Radius.circular(20.0),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20.0),
+              color: Theme.of(context).dialogBackgroundColor.withOpacity(0.9),
+            ),
+            padding: const EdgeInsets.all(24.0),
+            width: MediaQuery.of(context).size.width * 0.8,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (title != null) 
+                  DefaultTextStyle(
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).textTheme.titleLarge?.color,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 4,
+                          offset: const Offset(1, 1),
+                        )
+                      ],
+                    ),
+                    child: title,
+                  ),
+                if (title != null && content != null) const SizedBox(height: 16),
+                if (content != null)
+                  DefaultTextStyle(
+                    style: TextStyle(
+                      fontSize: 17,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                      height: 1.5,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 2,
+                          offset: const Offset(0.5, 0.5),
+                        )
+                      ],
+                    ),
+                    child: content,
+                  ),
+                if (actions != null && actions.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: actions,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 显示带液态玻璃效果的对话框
+  void _showGlassDialog({
+    Widget? title,
+    Widget? content,
+    List<Widget>? actions,
+  }) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return _buildGlassDialog(
+          title: title,
+          content: content,
+          actions: actions,
+        );
+      },
+    );
+  }
+
+  /// 还原所有更改到初始状态
+  void _resetChanges() {
+    // 显示确认对话框
+    _showGlassDialog(
+      title: const Text('确认还原'),
+      content: const Text('确定要还原所有更改吗？此操作不可撤销。'),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop(); // 关闭对话框
+          },
+          child: const Text('取消'),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop(); // 关闭确认对话框
+            // 还原所有文本控制器的值到初始状态
+            _titleController = TextEditingController(text: widget.tag.title);
+            _artistController = TextEditingController(text: widget.tag.trackArtist);
+            _albumController = TextEditingController(text: widget.tag.album);
+            _albumArtistController = TextEditingController(text: widget.tag.albumArtist);
+            _yearController = TextEditingController(text: widget.tag.year?.toString());
+            _genreController = TextEditingController(text: widget.tag.genre);
+            _trackNumberController = TextEditingController(text: widget.tag.trackNumber?.toString());
+            _trackTotalController = TextEditingController(text: widget.tag.trackTotal?.toString());
+            _discNumberController = TextEditingController(text: widget.tag.discNumber?.toString());
+            _discTotalController = TextEditingController(text: widget.tag.discTotal?.toString());
+            _lyricsController = TextEditingController(text: widget.tag.lyrics);
+            _durationController = TextEditingController(text: widget.tag.duration?.toString());
+            _bpmController = TextEditingController(text: widget.tag.bpm?.toString());
+            
+            // 还原文件名和扩展名
+            String fileName = path.basenameWithoutExtension(widget.filePath);
+            if (fileName.endsWith('_original')) {
+              fileName = fileName.substring(0, fileName.length - 9);
+            }
+            String fileExtension = path.extension(widget.filePath);
+            _filenameController.text = fileName;
+            _extensionController.text = fileExtension;
+            
+            // 还原封面图片
+            Uint8List? originalImage;
+            if (widget.tag.pictures.isNotEmpty) {
+              originalImage = widget.tag.pictures.first.bytes;
+            }
+            
+            // 更新状态
+            setState(() {
+              _currentCoverImage = originalImage;
+            });
+          },
+          child: const Text('确定'),
+        ),
+      ],
+    );
+  }
+
   @override
   void dispose() {
     // 释放控制器资源
@@ -181,22 +471,16 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     if (_formKey.currentState!.validate()) {
       try {
         // 显示保存进度
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (BuildContext context) {
-            return const AlertDialog(
-              title: Text('保存中'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 20),
-                  Text('正在保存标签信息...'),
-                ],
-              ),
-            );
-          },
+        _showGlassDialog(
+          title: const Text('保存中'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 20),
+              Text('正在保存标签信息...'),
+            ],
+          ),
         );
 
         // 直接保存到当前编辑的文件
@@ -213,22 +497,17 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           }
           
           // 使用对话框显示错误
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('保存失败'),
-                content: Text('保存失败: ${e.message}'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('确定'),
-                  ),
-                ],
-              );
-            },
+          _showGlassDialog(
+            title: const Text('保存失败'),
+            content: Text('保存失败: ${e.message}'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('确定'),
+              ),
+            ],
           );
         }
       } catch (e) {
@@ -237,22 +516,17 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           Navigator.of(context).pop();
           
           // 显示错误消息
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('保存失败'),
-                content: Text('保存失败: $e'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('确定'),
-                  ),
-                ],
-              );
-            },
+          _showGlassDialog(
+            title: const Text('保存失败'),
+            content: Text('保存失败: $e'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('确定'),
+              ),
+            ],
           );
           
           if (kDebugMode) {
@@ -309,22 +583,17 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         Navigator.of(context).pop(); // 关闭进度对话框
         
         // 使用对话框显示错误
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('保存失败'),
-              content: Text('保存失败: $e'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('确定'),
-                ),
-              ],
-            );
-          },
+        _showGlassDialog(
+          title: const Text('保存失败'),
+          content: Text('保存失败: $e'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('确定'),
+            ),
+          ],
         );
       }
     }
@@ -395,22 +664,17 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           Navigator.of(context).pop(); // 关闭进度对话框
           
           // 显示成功消息
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('保存成功'),
-                content: Text('文件已保存到: $outputFile'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('确定'),
-                  ),
-                ],
-              );
-            },
+          _showGlassDialog(
+            title: const Text('保存成功'),
+            content: Text('文件已保存到: $outputFile'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('确定'),
+              ),
+            ],
           );
         }
       } else {
@@ -418,22 +682,17 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         if (mounted) {
           Navigator.of(context).pop(); // 关闭进度对话框
           
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('操作取消'),
-                content: const Text('保存操作已取消'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('确定'),
-                  ),
-                ],
-              );
-            },
+          _showGlassDialog(
+            title: const Text('操作取消'),
+            content: const Text('保存操作已取消'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('确定'),
+              ),
+            ],
           );
         }
         
@@ -470,22 +729,17 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         Navigator.of(context).pop(); // 关闭进度对话框
         
         // 显示错误消息
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('功能不支持'),
-              content: const Text('当前平台不支持文件保存器功能'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('确定'),
-                ),
-              ],
-            );
-          },
+        _showGlassDialog(
+          title: const Text('功能不支持'),
+          content: const Text('当前平台不支持文件保存器功能'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('确定'),
+            ),
+          ],
         );
       }
     } catch (e) {
@@ -495,22 +749,23 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       if (mounted) {
         Navigator.of(context).pop(); // 关闭进度对话框
         
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('保存失败'),
-              content: Text('保存失败: $e'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('确定'),
-                ),
-              ],
-            );
-          },
+        _showGlassDialog(
+          title: const Text(
+            '保存失败',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text('保存失败: $e'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('确定'),
+            ),
+          ],
         );
       }
     }
@@ -534,22 +789,23 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         if (mounted) {
           Navigator.of(context).pop(); // 关闭进度对话框
           
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('权限不足'),
-                content: const Text('需要存储权限才能保存文件'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('确定'),
-                  ),
-                ],
-              );
-            },
+          _showGlassDialog(
+            title: const Text(
+              '权限不足',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: const Text('需要存储权限才能保存文件'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('确定'),
+              ),
+            ],
           );
         }
         return;
@@ -592,22 +848,23 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       if (mounted) {
         Navigator.of(context).pop(); // 关闭进度对话框
         
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('保存失败'),
-              content: Text('Android平台保存失败: $e'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('确定'),
-                ),
-              ],
-            );
-          },
+        _showGlassDialog(
+          title: const Text(
+            '保存失败',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text('Android平台保存失败: $e'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('确定'),
+            ),
+          ],
         );
       }
     }
@@ -700,22 +957,23 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       if (imageData.length > maxSize) {
         // 显示文件过大的提示
         if (mounted) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('文件过大警告'),
-                content: Text('图片文件过大(${(imageData.length / (1024 * 1024)).toStringAsFixed(2)}MB)，可能导致其他软件读取时崩溃。本软件通常可以正常处理这些问题但加载较慢，且可能无法保存到标签。你可以在封面显示后截图裁切来减小图片文件大小。'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('确定'),
-                  ),
-                ],
-              );
-            },
+          _showGlassDialog(
+            title: const Text(
+              '文件过大警告',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text('图片文件过大(${(imageData.length / (1024 * 1024)).toStringAsFixed(2)}MB)，可能导致其他软件读取时崩溃。本软件通常可以正常处理这些问题但加载较慢，且可能无法保存到标签。你可以在封面显示后截图裁切来减小图片文件大小。'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('确定'),
+              ),
+            ],
           );
         }
       }
@@ -737,22 +995,23 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       
       // 显示错误消息给用户
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('选择图片出错'),
-              content: Text('选择图片时出错: $e'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('确定'),
-                ),
-              ],
-            );
-          },
+        _showGlassDialog(
+          title: const Text(
+            '选择图片出错',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text('选择图片时出错: $e'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('确定'),
+            ),
+          ],
         );
       }
     }
@@ -824,7 +1083,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             children: [
               SizedBox(height: MediaQuery.of(context).padding.top),
               // 添加一个占位符，用于使内容层与状态栏之间的间距保持一致
-              const SizedBox(height: 16.0),
+              const SizedBox(height: 30),
               // 封面图片显示区域
               // 检查是否有封面图片数据，如果有则显示图片，否则显示添加图片的占位符
               if (_currentCoverImage != null)
@@ -837,12 +1096,51 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                         child: Container(
                           width: MediaQuery.of(context).size.width * 0.75,
                           constraints: const BoxConstraints(maxWidth: 400),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
-                          ),
-                          child: Image.memory(
-                            _currentCoverImage!,
-                            fit: BoxFit.contain,
+                          child: Stack(
+                            children: [
+                              // 液态玻璃背景效果
+                              Positioned.fill(
+                                child: LiquidGlassLayer(
+                                  settings: LiquidGlassSettings(
+                                    thickness: 6,
+                                    blur: 0.5,
+                                    lightAngle: 0.3 * pi,
+                                    lightIntensity: 0.7,
+                                    ambientStrength: 0.2,
+                                    blend: 0.5,
+                                    refractiveIndex: 1.2,
+                                    chromaticAberration: 0.2,
+                                    saturation: 1.05,
+                                  ),
+                                  child: LiquidGlass.inLayer(
+                                    shape: LiquidRoundedRectangle(
+                                      borderRadius: const Radius.circular(12.0),
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12.0),
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.black.withOpacity(0.2)
+                                            : Colors.white.withOpacity(0.2),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey),
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12.0),
+                                  child: Image.memory(
+                                    _currentCoverImage!,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -857,14 +1155,50 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                     child: Container(
                       width: MediaQuery.of(context).size.width * 0.75,
                       constraints: const BoxConstraints(maxWidth: 400),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                      ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Stack(
                         children: [
-                          Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
-                          Text('点击添加封面图片', style: TextStyle(color: Colors.grey)),
+                          // 液态玻璃背景效果
+                          Positioned.fill(
+                            child: LiquidGlassLayer(
+                              settings: LiquidGlassSettings(
+                                thickness: 6,
+                                blur: 0.5,
+                                lightAngle: 0.3 * pi,
+                                lightIntensity: 0.7,
+                                ambientStrength: 0.2,
+                                blend: 0.5,
+                                refractiveIndex: 1.2,
+                                chromaticAberration: 0.2,
+                                saturation: 1.05,
+                              ),
+                              child: LiquidGlass.inLayer(
+                                shape: LiquidRoundedRectangle(
+                                  borderRadius: const Radius.circular(12.0),
+                                ),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12.0),
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.black.withOpacity(0.2)
+                                        : Colors.white.withOpacity(0.2),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
+                                Text('点击添加封面图片', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -874,87 +1208,63 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 children: [
                   Expanded(
                     flex: 3,
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _filenameController,
-                      decoration: const InputDecoration(
-                        labelText: '文件名',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: '文件名',
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     flex: 1,
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _extensionController,
-                      decoration: const InputDecoration(
-                        labelText: '后缀',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: '后缀',
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              _buildGlassTextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: '标题',
-                  border: OutlineInputBorder(),
-                ),
+                labelText: '标题',
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _artistController,
-                      decoration: const InputDecoration(
-                        labelText: '艺术家',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: '艺术家',
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _albumController,
-                      decoration: const InputDecoration(
-                        labelText: '专辑',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: '专辑',
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              _buildGlassTextFormField(
                 controller: _albumArtistController,
-                decoration: const InputDecoration(
-                  labelText: '专辑艺术家',
-                  border: OutlineInputBorder(),
-                ),
+                labelText: '专辑艺术家',
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _genreController,
-                      decoration: const InputDecoration(
-                        labelText: '流派',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: '流派',
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _bpmController,
-                      decoration: const InputDecoration(
-                        labelText: 'BPM',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: 'BPM',
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
                     ),
                   ),
@@ -964,34 +1274,25 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _yearController,
-                      decoration: const InputDecoration(
-                        labelText: '年份',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: '年份',
                       keyboardType: TextInputType.number,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _trackNumberController,
-                      decoration: const InputDecoration(
-                        labelText: '曲目号',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: '曲目号',
                       keyboardType: TextInputType.number,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _trackTotalController,
-                      decoration: const InputDecoration(
-                        labelText: '曲目总数',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: '曲目总数',
                       keyboardType: TextInputType.number,
                     ),
                   ),
@@ -1001,53 +1302,35 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _discNumberController,
-                      decoration: const InputDecoration(
-                        labelText: '光盘号',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: '光盘号',
                       keyboardType: TextInputType.number,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _discTotalController,
-                      decoration: const InputDecoration(
-                        labelText: '光盘总数',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: '光盘总数',
                       keyboardType: TextInputType.number,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: _buildGlassTextFormField(
                       controller: _durationController,
-                      decoration: const InputDecoration(
-                        labelText: '持续时间(秒)',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: '时长(秒)',
                       keyboardType: TextInputType.number,
                       enabled: false, // 持续时间不能编辑
                     ),
                   ),
                 ],
               ),
-            
               const SizedBox(height: 16),
               SizedBox(
                 height: MediaQuery.of(context).size.height * 0.75,
-                child: TextFormField(
-                  controller: _lyricsController,
-                  decoration: const InputDecoration(
-                    labelText: '歌词',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: null,
-                  expands: true,
-                ),
+                child: _buildGlassLyricsFormField(),
               ),
               const SizedBox(height: 24),
               // Center(
@@ -1063,13 +1346,149 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       ),
     ),
   ),
+          // 左上角返回按钮 (移到最后确保在最顶层)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 0.0, // 更靠近顶部
+            left: 12.0,
+            child: LiquidGlassLayer(
+              settings: LiquidGlassSettings(
+                thickness: 12, // 玻璃厚度，适中值提供明显的折射效果
+                blur: 1.5, // 模糊度，适度增加以增强玻璃质感
+                lightAngle: 0.3 * pi, // 光源角度，控制高光位置
+                lightIntensity: 1.2, // 光源强度，增强高光效果使玻璃更亮眼
+                ambientStrength: 0.4, // 环境光强度，适度增加环境光以增强立体感
+                blend: 0.7, // 形状融合度，控制多个形状间的混合效果
+                refractiveIndex: 1.6, // 折射率，增加折射效果使玻璃更真实
+                chromaticAberration: 0.4, // 色彩分离度，轻微色散增强光学效果
+                saturation: 1.2, // 饱和度，增强色彩鲜艳度
+              ),
+              child: LiquidGlass.inLayer(
+                shape: LiquidRoundedRectangle(
+                  borderRadius: const Radius.circular(20.0),
+                ),
+                child: SizedBox(
+                  width: 40.0,
+                  height: 40.0,
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    mini: true,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    child: const Icon(Icons.arrow_back),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // 右上角操作按钮组
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 0.0, // 更靠近顶部
+            right: 12.0,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 还原更改按钮
+                LiquidGlassLayer(
+                  settings: LiquidGlassSettings(
+                    thickness: 12, // 玻璃厚度，适中值提供明显的折射效果
+                    blur: 1.5, // 模糊度，适度增加以增强玻璃质感
+                    lightAngle: 0.3 * pi, // 光源角度，控制高光位置
+                    lightIntensity: 1.2, // 光源强度，增强高光效果使玻璃更亮眼
+                    ambientStrength: 0.4, // 环境光强度，适度增加环境光以增强立体感
+                    blend: 0.7, // 形状融合度，控制多个形状间的混合效果
+                    refractiveIndex: 1.6, // 折射率，增加折射效果使玻璃更真实
+                    chromaticAberration: 0.4, // 色彩分离度，轻微色散增强光学效果
+                    saturation: 1.2, // 饱和度，增强色彩鲜艳度
+                  ),
+                  child: LiquidGlass.inLayer(
+                    shape: LiquidRoundedRectangle(
+                      borderRadius: const Radius.circular(20.0),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _resetChanges,
+                          borderRadius: BorderRadius.circular(20.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '还原更改',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.normal,
+                                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.refresh, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // 保存按钮
+                LiquidGlassLayer(
+                  settings: LiquidGlassSettings(
+                    thickness: 12, // 玻璃厚度，适中值提供明显的折射效果
+                    blur: 1.5, // 模糊度，适度增加以增强玻璃质感
+                    lightAngle: 0.3 * pi, // 光源角度，控制高光位置
+                    lightIntensity: 1.2, // 光源强度，增强高光效果使玻璃更亮眼
+                    ambientStrength: 0.4, // 环境光强度，适度增加环境光以增强立体感
+                    blend: 0.7, // 形状融合度，控制多个形状间的混合效果
+                    refractiveIndex: 1.6, // 折射率，增加折射效果使玻璃更真实
+                    chromaticAberration: 0.4, // 色彩分离度，轻微色散增强光学效果
+                    saturation: 1.2, // 饱和度，增强色彩鲜艳度
+                  ),
+                  child: LiquidGlass.inLayer(
+                    shape: LiquidRoundedRectangle(
+                      borderRadius: const Radius.circular(20.0),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _saveTags,
+                          borderRadius: BorderRadius.circular(20.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '保存',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.normal,
+                                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.save, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
         
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _saveTags,
-        tooltip: '保存标签',
-        child: const Icon(Icons.save),
       ),
     );
   }
