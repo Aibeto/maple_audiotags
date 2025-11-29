@@ -9,6 +9,7 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // 导入Dart IO库，用于文件操作
 import 'dart:io';
+import 'dart:math';
 // 导入路径处理库
 // ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as path;
@@ -30,8 +31,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 // 导入文件选择器
 import 'package:file_selector/file_selector.dart';
-
-// 导入MethodChannel用于与原生通信
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 // 程序入口点，使用async关键字支持异步操作
 void main() async {
@@ -411,75 +411,189 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     // 返回Scaffold布局组件，这是Material Design的基本页面布局结构
     return Scaffold(
-      // 应用栏
-      appBar: AppBar(
-        // 设置应用栏背景色，使用主题中的反向主色
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // 设置应用栏标题，使用从父组件传递的title参数
-        title: Text(widget.title),
-        // 右侧操作按钮列表
-        actions: [
-          // 主题切换按钮
-          IconButton(
-            // 根据当前主题模式显示不同图标
-            icon: Icon(
-              widget.isDarkMode == null
-                  // 如果为null，显示自动模式图标
-                  ? Icons.auto_mode
-                  // 否则根据布尔值显示暗色或亮色模式图标
-                  : (widget.isDarkMode! ? Icons.dark_mode : Icons.light_mode),
-            ),
-            // 点击事件处理，调用父组件传递的切换主题方法
-            onPressed: widget.toggleTheme,
-          ),
-          // 批量编辑功能按钮
-          IconButton(
-            // 菜单图标
-            icon: const Icon(Icons.menu),
-            // 点击事件处理
-            onPressed: () {
-              // 导航到批量编辑页面
-              Navigator.push(
-                context,
-                // 使用MaterialPageRoute进行页面跳转
-                MaterialPageRoute(builder: (context) => const BatchEditPage()),
-              );
-            },
-          ),
-        ]
-      ),
       // 页面主体内容
-      body: Center(
-        // 居中布局组件
-        child: Column(
-          // 主轴居中对齐
-          mainAxisAlignment: MainAxisAlignment.center,
-          // 子组件列表
-          children: <Widget>[
-            const Icon(
-              Icons.music_note,
-              size: 100,
-              color: Colors.grey,
+      body: Stack(
+        children: [
+          // 背景图片 - 根据主题模式调整亮度并添加旋转动画
+          Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
             ),
-            const SizedBox(height: 20),
-            const Text(
-              '选择一个音频文件开始编辑标签',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey,
-              ),
+          ),
+          // 页面内容
+          Center(
+            // 居中布局组件
+            child: Column(
+              // 主轴居中对齐
+              mainAxisAlignment: MainAxisAlignment.center,
+              // 子组件列表
+              children: <Widget>[
+                const Icon(
+                  Icons.music_note,
+                  size: 100,
+                  color: Colors.grey,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  '选择一个音频文件开始编辑标签',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                // 选择文件按钮
+                LiquidGlassLayer(
+                  settings: LiquidGlassSettings(
+                    thickness: 12,
+                    blur: 1.5,
+                    lightAngle: 0.3 * pi,
+                    lightIntensity: 1.2,
+                    ambientStrength: 0.4,
+                    blend: 0.7,
+                    refractiveIndex: 1.6,
+                    chromaticAberration: 0.4,
+                    saturation: 1.2,
+                  ),
+                  child: LiquidGlass.inLayer(
+                    shape: LiquidRoundedRectangle(
+                      borderRadius: const Radius.circular(28.0),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(28.0),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _selectMusicFile,
+                          borderRadius: BorderRadius.circular(28.0),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.music_note),
+                              SizedBox(width: 8),
+                              Text('选择音频文件'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-      // 浮动操作按钮
-      floatingActionButton: FloatingActionButton(
-        // 按钮点击事件，调用选择音乐文件方法
-        onPressed: _selectMusicFile,
-        // 按钮提示信息
-        tooltip: '选择音乐文件',
-        // 按钮图标
-        child: const Icon(Icons.music_note),
+          ),
+          // 右上角操作按钮列表
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 12.0,
+            right: 12.0,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 主题切换按钮
+                LiquidGlassLayer(
+                  settings: LiquidGlassSettings(
+                    thickness: 12,
+                    blur: 1.5,
+                    lightAngle: 0.3 * pi,
+                    lightIntensity: 1.2,
+                    ambientStrength: 0.4,
+                    blend: 0.7,
+                    refractiveIndex: 1.6,
+                    chromaticAberration: 0.4,
+                    saturation: 1.2,
+                  ),
+                  child: LiquidGlass.inLayer(
+                    shape: LiquidRoundedRectangle(
+                      borderRadius: const Radius.circular(20.0),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: widget.toggleTheme,
+                          borderRadius: BorderRadius.circular(20.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                widget.isDarkMode == null
+                                    // 如果为null，显示自动模式图标
+                                    ? Icons.auto_mode
+                                    // 否则根据布尔值显示暗色或亮色模式图标
+                                    : (widget.isDarkMode! ? Icons.dark_mode : Icons.light_mode),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                widget.isDarkMode == null
+                                    ? '跟随系统'
+                                    : (widget.isDarkMode! ? '深色模式' : '浅色模式'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // 批量编辑功能按钮
+                LiquidGlassLayer(
+                  settings: LiquidGlassSettings(
+                    thickness: 12,
+                    blur: 1.5,
+                    lightAngle: 0.3 * pi,
+                    lightIntensity: 1.2,
+                    ambientStrength: 0.4,
+                    blend: 0.7,
+                    refractiveIndex: 1.6,
+                    chromaticAberration: 0.4,
+                    saturation: 1.2,
+                  ),
+                  child: LiquidGlass.inLayer(
+                    shape: LiquidRoundedRectangle(
+                      borderRadius: const Radius.circular(20.0),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            // 导航到批量编辑页面
+                            Navigator.push(
+                              context,
+                              // 使用MaterialPageRoute进行页面跳转
+                              MaterialPageRoute(builder: (context) => const BatchEditPage()),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(20.0),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.menu),
+                              SizedBox(width: 6),
+                              Text('批量编辑'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
