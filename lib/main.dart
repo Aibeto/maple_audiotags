@@ -1,10 +1,13 @@
 // 导入Flutter基础Material设计组件库
 // ignore_for_file: use_build_context_synchronously
 
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 // 导入动态颜色支持库，用于Android 12+的Monet取色功能
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 // 导入共享偏好设置库，用于持久化存储用户设置
 import 'package:shared_preferences/shared_preferences.dart';
 // 导入Dart IO库，用于文件操作
@@ -32,6 +35,10 @@ import 'package:permission_handler/permission_handler.dart';
 // 导入文件选择器
 import 'package:file_selector/file_selector.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+
+// 导入网络图片加载库
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:http/http.dart' as http;
 
 // 程序入口点，使用async关键字支持异步操作
 void main() async {
@@ -190,6 +197,23 @@ class MyHomePage extends StatefulWidget {
 // 音频标签编辑器主页状态管理类，继承自State
 class _MyHomePageState extends State<MyHomePage> {
   // 创建与原生通信的MethodChannel
+  Uint8List? _backgroundImageBytes;
+
+  // 异步获取背景图片
+  Future<void> _loadBackgroundImage() async {
+    try {
+      final response = await http.get(Uri.parse('https://bing.img.run/uhd.php'));
+      if (response.statusCode == 200) {
+        setState(() {
+          _backgroundImageBytes = response.bodyBytes;
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('KDEBUG: 无法加载背景图片: $e');
+      }
+    }
+  }
 
   // 请求存储权限
   Future<bool> _requestFullStoragePermission() async {
@@ -406,6 +430,15 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  @override
+  void initState() {
+    super.initState();
+    // 在其他初始化完成后异步加载背景图片
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadBackgroundImage();
+    });
+  }
+
   // 构建页面UI的方法
   @override
   Widget build(BuildContext context) {
@@ -414,12 +447,27 @@ class _MyHomePageState extends State<MyHomePage> {
       // 页面主体内容
       body: Stack(
         children: [
-          // 背景图片 - 根据主题模式调整亮度并添加旋转动画
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
+          // 背景图片
+          if (_backgroundImageBytes != null)
+            Positioned.fill(
+              child: Transform.scale(
+                scale: 1, // 放大50%
+                child: Image.memory(
+                  _backgroundImageBytes!,
+                  fit: BoxFit.cover, // 自适应并撑满屏幕高度
+                  alignment: Alignment.center,
+                ),
+              ),
             ),
-          ),
+          // 模糊层 (根据主题模式使用不同颜色的遮罩)
+          if (_backgroundImageBytes != null)
+            Positioned.fill(
+              child: Container(
+                color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.black.withOpacity(0.2) 
+                  : Colors.white.withOpacity(0.2),
+              ),
+            ),
           // 页面内容
           Center(
             // 居中布局组件
@@ -428,17 +476,21 @@ class _MyHomePageState extends State<MyHomePage> {
               mainAxisAlignment: MainAxisAlignment.center,
               // 子组件列表
               children: <Widget>[
-                const Icon(
+                Icon(
                   Icons.music_note,
                   size: 100,
-                  color: Colors.grey,
+                  color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.white 
+                    : Colors.black,
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   '选择一个音频文件开始编辑标签',
                   style: TextStyle(
                     fontSize: 18,
-                    color: Colors.grey,
+                    color: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.white 
+                      : Colors.black,
                   ),
                 ),
                 const SizedBox(height: 40),
