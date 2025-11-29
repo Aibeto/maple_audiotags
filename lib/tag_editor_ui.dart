@@ -1,16 +1,20 @@
 // 音频标签编辑UI组件
+// ignore_for_file: depend_on_referenced_packages, deprecated_member_use
+
+import 'dart:async';
+// 添加这一行以引入pi常量
+import 'dart:io' show Platform, File;
+import 'dart:ui' as ui;
+
 import 'package:audiotags/audiotags.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:file_selector/file_selector.dart';
-
-import 'dart:io' show Platform, File, Directory;
-import 'package:path/path.dart' as path;
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as path;
+import 'package:permission_handler/permission_handler.dart';
 
 /// 音频标签编辑UI组件
 /// 提供一个表单界面用于查看和编辑音频文件的标签信息
@@ -38,7 +42,7 @@ class TagEditorUI extends StatefulWidget {
   State<TagEditorUI> createState() => _TagEditorUIState();
 }
 
-class _TagEditorUIState extends State<TagEditorUI> {
+class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin {
   /// 控制器用于编辑标题
   late TextEditingController _titleController;
 
@@ -77,9 +81,27 @@ class _TagEditorUIState extends State<TagEditorUI> {
 
   /// 控制器用于编辑BPM
   late TextEditingController _bpmController;
+  
+  /// 控制器用于编辑文件名
+  late TextEditingController _filenameController;
+  
+  /// 控制器用于编辑文件扩展名
+  late TextEditingController _extensionController;
 
   /// 表单键，用于验证和保存表单
   final _formKey = GlobalKey<FormState>();
+  
+  /// 当前封面图片数据
+  Uint8List? _currentCoverImage;
+  
+  /// 背景图片旋转动画控制器
+  late AnimationController _backgroundRotationController;
+  
+  /// 背景图片旋转动画值
+  late Animation<double> _backgroundRotationAnimation;
+  
+  /// 图片刷新定时器
+  // Timer? _refreshTimer; // 已移除，不再使用定时器刷新
 
   @override
   void initState() {
@@ -99,6 +121,36 @@ class _TagEditorUIState extends State<TagEditorUI> {
     _lyricsController = TextEditingController(text: widget.tag.lyrics);
     _durationController = TextEditingController(text: widget.tag.duration?.toString());
     _bpmController = TextEditingController(text: widget.tag.bpm?.toString());
+    
+    // 初始化文件名和扩展名控制器
+    String fileName = path.basenameWithoutExtension(widget.filePath);
+    // 删除文件名末尾的"_original"后缀（如果存在）
+    if (fileName.endsWith('_original')) {
+      fileName = fileName.substring(0, fileName.length - 9); // "_original" 长度为9
+    }
+    String fileExtension = path.extension(widget.filePath);
+    _filenameController = TextEditingController(text: fileName);
+    _extensionController = TextEditingController(text: fileExtension);
+    
+    // 初始化封面图片
+    if (widget.tag.pictures.isNotEmpty) {
+      _currentCoverImage = widget.tag.pictures.first.bytes;
+    }
+    
+    // 初始化背景图片旋转动画控制器
+    _backgroundRotationController = AnimationController(
+      duration: const Duration(seconds: 60), // 增加50%旋转速度，360度/6度每秒 = 60秒
+      vsync: this,
+    )..repeat(); // 无限重复动画
+    
+    // 创建旋转动画值（0到1）
+    _backgroundRotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(_backgroundRotationController);
+    
+    // 不再使用定时器刷新，改用更高效的方式处理图片渲染
+    // 图片会在旋转动画中自然重新渲染，无需额外处理
   }
 
   @override
@@ -117,6 +169,10 @@ class _TagEditorUIState extends State<TagEditorUI> {
     _lyricsController.dispose();
     _durationController.dispose();
     _bpmController.dispose();
+    _filenameController.dispose();
+    _extensionController.dispose();
+    _backgroundRotationController.dispose(); // 释放动画控制器
+    // _refreshTimer?.cancel(); // 已移除定时器刷新
     super.dispose();
   }
 
@@ -155,10 +211,24 @@ class _TagEditorUIState extends State<TagEditorUI> {
           if (kDebugMode) {
             print('保存失败: ${e.message}');
           }
-          Fluttertoast.showToast(
-            msg: '保存失败: ${e.message}',
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
+          
+          // 使用对话框显示错误
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('保存失败'),
+                content: Text('保存失败: ${e.message}'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('确定'),
+                  ),
+                ],
+              );
+            },
           );
         }
       } catch (e) {
@@ -167,10 +237,22 @@ class _TagEditorUIState extends State<TagEditorUI> {
           Navigator.of(context).pop();
           
           // 显示错误消息
-          Fluttertoast.showToast(
-            msg: '保存失败: $e',
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('保存失败'),
+                content: Text('保存失败: $e'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('确定'),
+                  ),
+                ],
+              );
+            },
           );
           
           if (kDebugMode) {
@@ -185,7 +267,13 @@ class _TagEditorUIState extends State<TagEditorUI> {
   /// 直接保存标签到当前文件，并提供选项将文件保存到用户指定位置
   Future<void> _saveDirectly() async {
     try {
-      // 创建新的标签对象
+      // Prepare image data
+      List<Picture>? pictures;
+      if (_currentCoverImage != null) {
+        pictures = [Picture(bytes: _currentCoverImage!, mimeType: MimeType.jpeg, pictureType: PictureType.other)];
+      }
+      
+      // Create new tag object
       final updatedTag = Tag(
         title: _titleController.text,
         trackArtist: _artistController.text,
@@ -200,7 +288,7 @@ class _TagEditorUIState extends State<TagEditorUI> {
         lyrics: _lyricsController.text,
         duration: widget.tag.duration, // 保持原始时长
         bpm: _bpmController.text.isNotEmpty ? double.tryParse(_bpmController.text) : null,
-        pictures: widget.tag.pictures, // 保持原始图片
+        pictures: pictures ?? const [], // 使用新的图片数据，如果为空则使用空列表
       );
 
       // 直接将标签写入当前编辑的文件（即widget.filePath）
@@ -208,24 +296,35 @@ class _TagEditorUIState extends State<TagEditorUI> {
       
       if (kDebugMode) {
         print('KDEBUG: 标签已直接写入文件: ${widget.filePath}');
+        print('KDEBUG: 当前平台: ${Platform.operatingSystem}');
       }
       
       // 保存后使用文件保存器将文件复制到用户选择的位置
       await _saveWithFileSaver();
     } catch (e) {
       if (kDebugMode) {
-        print('直接保存标签失败: $e');
+        print('KDEBUG: 直接保存标签失败: $e');
       }
       if (mounted) {
         Navigator.of(context).pop(); // 关闭进度对话框
         
-        if (kDebugMode) {
-          print('KDEBUG: 保存失败: $e');
-        }
-        Fluttertoast.showToast(
-          msg: '保存失败: $e',
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
+        // 使用对话框显示错误
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('保存失败'),
+              content: Text('保存失败: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
         );
       }
     }
@@ -236,28 +335,46 @@ class _TagEditorUIState extends State<TagEditorUI> {
     try {
       // 获取当前时间戳
       String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      // 获取文件名（不含扩展名）和扩展名
-      String fileNameWithoutExtension = path.basenameWithoutExtension(widget.filePath);
-      String fileExtension = path.extension(widget.filePath);
+      // 获取文件名和扩展名（使用用户编辑的值）
+      String fileName = _filenameController.text;
+      String fileExtension = _extensionController.text;
       // 构建带时间戳的文件名
-      String timestampedFileName = '${fileNameWithoutExtension}_modified_${timestamp}$fileExtension';
+      String timestampedFileName = '${fileName}_modified_$timestamp$fileExtension';
       
       if (kDebugMode) {
         print('KDEBUG: 准备使用文件保存器保存文件');
         print('KDEBUG: 建议的文件名: $timestampedFileName');
+        print('KDEBUG: 当前平台: ${Platform.operatingSystem}');
       }
       
-      // 检查是否在Android平台
+      // 根据不同平台使用不同的保存方法
       if (Platform.isAndroid) {
         // 在Android上使用替代方法保存文件
-        await _saveFileForAndroid(timestampedFileName);
+        String userDefinedFileName = '$fileName$fileExtension';
+        await _saveFileForAndroid(userDefinedFileName);
         return;
+      } else if (Platform.isIOS) {
+        if (kDebugMode) {
+          print('KDEBUG: iOS平台使用标准文件保存方法');
+        }
+      } else if (Platform.isWindows) {
+        if (kDebugMode) {
+          print('KDEBUG: Windows平台使用标准文件保存方法');
+        }
+      } else if (Platform.isMacOS) {
+        if (kDebugMode) {
+          print('KDEBUG: macOS平台使用标准文件保存方法');
+        }
+      } else if (Platform.isLinux) {
+        if (kDebugMode) {
+          print('KDEBUG: Linux平台使用标准文件保存方法');
+        }
       }
       
       // 使用文件选择器让用户选择保存位置
       final FileSaveLocation? outputFile = await getSaveLocation(
         suggestedName: timestampedFileName,
-        acceptedTypeGroups: [const XTypeGroup(label: 'audio', extensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'])],
+        acceptedTypeGroups: [XTypeGroup(label: 'audio', extensions: [fileExtension.replaceFirst('.', '')])],
       );
 
       if (outputFile != null) {
@@ -278,10 +395,22 @@ class _TagEditorUIState extends State<TagEditorUI> {
           Navigator.of(context).pop(); // 关闭进度对话框
           
           // 显示成功消息
-          Fluttertoast.showToast(
-            msg: '文件已保存到: $outputFile',
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('保存成功'),
+                content: Text('文件已保存到: $outputFile'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('确定'),
+                  ),
+                ],
+              );
+            },
           );
         }
       } else {
@@ -289,10 +418,22 @@ class _TagEditorUIState extends State<TagEditorUI> {
         if (mounted) {
           Navigator.of(context).pop(); // 关闭进度对话框
           
-          Fluttertoast.showToast(
-            msg: '保存操作已取消',
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('操作取消'),
+                content: const Text('保存操作已取消'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('确定'),
+                  ),
+                ],
+              );
+            },
           );
         }
         
@@ -304,40 +445,72 @@ class _TagEditorUIState extends State<TagEditorUI> {
       // 处理getSaveLocation未实现的情况
       if (kDebugMode) {
         print('KDEBUG: getSaveLocation()未实现: $e');
+        print('KDEBUG: 当前平台: ${Platform.operatingSystem}');
       }
       
-      // 尝试使用Android的替代方法
+      // 尝试使用平台特定的替代方法
       if (Platform.isAndroid) {
-        String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-        String fileNameWithoutExtension = path.basenameWithoutExtension(widget.filePath);
-        String fileExtension = path.extension(widget.filePath);
-        String timestampedFileName = '${fileNameWithoutExtension}_modified_${timestamp}$fileExtension';
+        String fileName = _filenameController.text;
+        String fileExtension = _extensionController.text;
+        String userDefinedFileName = '$fileName$fileExtension';
         
-        await _saveFileForAndroid(timestampedFileName);
+        await _saveFileForAndroid(userDefinedFileName);
         return;
+      } else if (Platform.isIOS) {
+        if (kDebugMode) {
+          print('KDEBUG: iOS平台不支持文件保存器的替代方案');
+        }
+      } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+        if (kDebugMode) {
+          print('KDEBUG: ${Platform.operatingSystem}平台不支持文件保存器');
+        }
       }
       
       if (mounted) {
         Navigator.of(context).pop(); // 关闭进度对话框
         
         // 显示错误消息
-        Fluttertoast.showToast(
-          msg: '当前平台不支持文件保存器功能',
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('功能不支持'),
+              content: const Text('当前平台不支持文件保存器功能'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
         );
       }
     } catch (e) {
       if (kDebugMode) {
-        print('使用文件保存器保存失败: $e');
+        print('KDEBUG: 使用文件保存器保存失败: $e');
       }
       if (mounted) {
         Navigator.of(context).pop(); // 关闭进度对话框
         
-        Fluttertoast.showToast(
-          msg: '保存失败: $e',
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('保存失败'),
+              content: Text('保存失败: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
         );
       }
     }
@@ -354,13 +527,29 @@ class _TagEditorUIState extends State<TagEditorUI> {
       // 检查并请求存储权限
       bool hasPermission = await _requestStoragePermission();
       if (!hasPermission) {
+        if (kDebugMode) {
+          print('KDEBUG: 存储权限被拒绝');
+        }
+        
         if (mounted) {
           Navigator.of(context).pop(); // 关闭进度对话框
           
-          Fluttertoast.showToast(
-            msg: '需要存储权限才能保存文件',
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('权限不足'),
+                content: const Text('需要存储权限才能保存文件'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('确定'),
+                  ),
+                ],
+              );
+            },
           );
         }
         return;
@@ -403,10 +592,22 @@ class _TagEditorUIState extends State<TagEditorUI> {
       if (mounted) {
         Navigator.of(context).pop(); // 关闭进度对话框
         
-        Fluttertoast.showToast(
-          msg: 'Android平台保存失败: $e',
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('保存失败'),
+              content: Text('Android平台保存失败: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
         );
       }
     }
@@ -419,22 +620,38 @@ class _TagEditorUIState extends State<TagEditorUI> {
       if (Platform.isAndroid) {
         final androidVersion = int.tryParse(Platform.operatingSystemVersion.replaceAll(RegExp(r'[^\d.]'), '').split('.').first) ?? 0;
         
+        if (kDebugMode) {
+          print('KDEBUG: Android版本: $androidVersion');
+        }
+        
         if (androidVersion >= 11) {
           // Android 11及以上版本使用MANAGE_EXTERNAL_STORAGE权限
           var status = await Permission.manageExternalStorage.status;
           if (!status.isGranted) {
+            if (kDebugMode) {
+              print('KDEBUG: 请求MANAGE_EXTERNAL_STORAGE权限');
+            }
             // 请求MANAGE_EXTERNAL_STORAGE权限
             status = await Permission.manageExternalStorage.request();
             return status.isGranted;
+          }
+          if (kDebugMode) {
+            print('KDEBUG: MANAGE_EXTERNAL_STORAGE权限已授予');
           }
           return true;
         } else {
           // Android 10及以下版本使用传统存储权限
           var status = await Permission.storage.status;
           if (!status.isGranted) {
+            if (kDebugMode) {
+              print('KDEBUG: 请求存储权限');
+            }
             // 请求存储权限
             status = await Permission.storage.request();
             return status.isGranted;
+          }
+          if (kDebugMode) {
+            print('KDEBUG: 存储权限已授予');
           }
           return true;
         }
@@ -447,31 +664,237 @@ class _TagEditorUIState extends State<TagEditorUI> {
       return false;
     }
   }
+  
+  /// 选择新的封面图片
+  Future<void> _selectNewCoverImage() async {
+    // 使用file_selector选择图片文件
+    const XTypeGroup typeGroup = XTypeGroup(
+      label: 'images',
+      extensions: ['jpg', 'jpeg', 'png', 'bmp', 'gif'],
+    );
+    
+    final List<XFile> files = await openFiles(
+      acceptedTypeGroups: [typeGroup],
+      confirmButtonText: '选择图片文件',
+    );
+    
+    // 检查用户是否选择了文件
+    if (files.isEmpty) {
+      // 用户取消了选择
+      return;
+    }
+    
+    // 只处理第一个文件
+    final XFile selectedFile = files.first;
+    
+    try {
+      // 直接读取文件内容为字节
+      final Uint8List imageData = await selectedFile.readAsBytes();
+      Fluttertoast.showToast(
+        msg: '正在导入图片: ${selectedFile.name}',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+      );
+      // 检查文件大小是否超过3MB
+      const int maxSize = 3 * 1024 * 1024; // 3MB in bytes
+      if (imageData.length > maxSize) {
+        // 显示文件过大的提示
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('文件过大警告'),
+                content: Text('图片文件过大(${(imageData.length / (1024 * 1024)).toStringAsFixed(2)}MB)，可能导致其他软件读取时崩溃。本软件通常可以正常处理这些问题但加载较慢，且可能无法保存到标签。你可以在封面显示后截图裁切来减小图片文件大小。'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('确定'),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      }
+      
+      // 更新当前封面图片
+      if (mounted) {
+        setState(() {
+          _currentCoverImage = imageData;
+        });
+      }
+      
+      if (kDebugMode) {
+        print('KDEBUG: 新封面图片已选择，大小: ${imageData.length} 字节');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('KDEBUG: 选择新封面图片时出错: $e');
+      }
+      
+      // 显示错误消息给用户
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('选择图片出错'),
+              content: Text('选择图片时出错: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('编辑标签'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveTags,
-            tooltip: '保存标签',
+      body: Stack(
+        children: [
+          // 背景图片 - 根据主题模式调整亮度并添加旋转动画
+          if (_currentCoverImage != null)
+    Positioned.fill(
+      child: RotationTransition(
+        turns: _backgroundRotationAnimation,
+        child: Container(
+          alignment: Alignment.center,
+          child: Transform.scale(
+            scale: 2.0, // 放大50%
+            child: Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: MemoryImage(_currentCoverImage!),
+                  fit: BoxFit.contain,
+                  colorFilter: ColorFilter.mode(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.05)
+                        : Colors.white.withOpacity(0.05),
+                    BlendMode.srcOver,
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
+    ),
+  // 模糊层 - 应用在背景图片之上
+  if (_currentCoverImage != null)
+    Positioned.fill(
+      child: Container(
+        alignment: Alignment.center,
+        child: Transform.scale(
+          scale: 2.0, // 放大50%，与背景图片保持一致
+          child: ClipRect( // 必须包含ClipRect才能使BackdropFilter正常工作
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 25.0, sigmaY: 25.0), // 增大十倍模糊半径
+              child: Container(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.30)
+                    : Colors.white.withOpacity(0.25), // 使用与背景图片相同的颜色过滤器
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  // 内容层 - 表单等UI元素
+  SingleChildScrollView(
+    padding: const EdgeInsets.all(16.0),
+    child: Form(
+      key: _formKey,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            // 添加间距避让状态栏
             children: [
-              if (kDebugMode) 
-                Text('当前工作文件路径: ${widget.filePath}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              if (kDebugMode && widget.realFilePath != null)
-                Text('真实文件路径: ${widget.realFilePath}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              SizedBox(height: MediaQuery.of(context).padding.top),
+              // 添加一个占位符，用于使内容层与状态栏之间的间距保持一致
+              const SizedBox(height: 16.0),
+              // 封面图片显示区域
+              // 检查是否有封面图片数据，如果有则显示图片，否则显示添加图片的占位符
+              if (_currentCoverImage != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: GestureDetector(
+                        onTap: _selectNewCoverImage,
+                        child: Container(
+                          width: MediaQuery.of(context).size.width * 0.75,
+                          constraints: const BoxConstraints(maxWidth: 400),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                          ),
+                          child: Image.memory(
+                            _currentCoverImage!,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                )
+              else
+                Center(
+                  child: GestureDetector(
+                    onTap: _selectNewCoverImage,
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.75,
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                      ),
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
+                          Text('点击添加封面图片', style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      controller: _filenameController,
+                      decoration: const InputDecoration(
+                        labelText: '文件名',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 1,
+                    child: TextFormField(
+                      controller: _extensionController,
+                      decoration: const InputDecoration(
+                        labelText: '后缀',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _titleController,
@@ -481,20 +904,28 @@ class _TagEditorUIState extends State<TagEditorUI> {
                 ),
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _artistController,
-                decoration: const InputDecoration(
-                  labelText: '艺术家',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _albumController,
-                decoration: const InputDecoration(
-                  labelText: '专辑',
-                  border: OutlineInputBorder(),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _artistController,
+                      decoration: const InputDecoration(
+                        labelText: '艺术家',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _albumController,
+                      decoration: const InputDecoration(
+                        labelText: '专辑',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -505,12 +936,29 @@ class _TagEditorUIState extends State<TagEditorUI> {
                 ),
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _genreController,
-                decoration: const InputDecoration(
-                  labelText: '流派',
-                  border: OutlineInputBorder(),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _genreController,
+                      decoration: const InputDecoration(
+                        labelText: '流派',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _bpmController,
+                      decoration: const InputDecoration(
+                        labelText: 'BPM',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Row(
@@ -536,11 +984,7 @@ class _TagEditorUIState extends State<TagEditorUI> {
                       keyboardType: TextInputType.number,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
+                  const SizedBox(width: 16),
                   Expanded(
                     child: TextFormField(
                       controller: _trackTotalController,
@@ -551,7 +995,11 @@ class _TagEditorUIState extends State<TagEditorUI> {
                       keyboardType: TextInputType.number,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
                   Expanded(
                     child: TextFormField(
                       controller: _discNumberController,
@@ -562,11 +1010,7 @@ class _TagEditorUIState extends State<TagEditorUI> {
                       keyboardType: TextInputType.number,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
+                  const SizedBox(width: 16),
                   Expanded(
                     child: TextFormField(
                       controller: _discTotalController,
@@ -591,15 +1035,7 @@ class _TagEditorUIState extends State<TagEditorUI> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _bpmController,
-                decoration: const InputDecoration(
-                  labelText: 'BPM(每分钟节拍数)',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-              ),
+            
               const SizedBox(height: 16),
               SizedBox(
                 height: MediaQuery.of(context).size.height * 0.75,
@@ -613,7 +1049,7 @@ class _TagEditorUIState extends State<TagEditorUI> {
                   expands: true,
                 ),
               ),
-              // const SizedBox(height: 24),
+              const SizedBox(height: 24),
               // Center(
               //   child: ElevatedButton.icon(
               //     onPressed: _saveTags,
@@ -624,6 +1060,16 @@ class _TagEditorUIState extends State<TagEditorUI> {
             ],
           ),
         ),
+      ),
+    ),
+  ),
+        ],
+        
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _saveTags,
+        tooltip: '保存标签',
+        child: const Icon(Icons.save),
       ),
     );
   }

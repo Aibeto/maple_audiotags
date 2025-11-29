@@ -21,7 +21,6 @@ import 'edit.dart';
 // 导入标签编辑UI
 import 'tag_editor_ui.dart';
 // 导入Toast库
-import 'package:fluttertoast/fluttertoast.dart';
 
 // 导入日期格式化库
 import 'package:intl/intl.dart';
@@ -33,7 +32,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:file_selector/file_selector.dart';
 
 // 导入MethodChannel用于与原生通信
-import 'package:flutter/services.dart';
 
 // 程序入口点，使用async关键字支持异步操作
 void main() async {
@@ -192,7 +190,6 @@ class MyHomePage extends StatefulWidget {
 // 音频标签编辑器主页状态管理类，继承自State
 class _MyHomePageState extends State<MyHomePage> {
   // 创建与原生通信的MethodChannel
-  static const platform = MethodChannel('aibeto.maple.audiotags/filepath');
 
   // 请求存储权限
   Future<bool> _requestFullStoragePermission() async {
@@ -229,10 +226,22 @@ class _MyHomePageState extends State<MyHomePage> {
     bool hasPermission = await _requestFullStoragePermission();
     if (!hasPermission) {
       if (mounted) {
-        Fluttertoast.showToast(
-          msg: '需要完全存储权限才能选择和修改文件',
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('权限不足'),
+              content: const Text('需要完全存储权限才能选择和修改文件'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
         );
       }
       return;
@@ -345,11 +354,23 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         );
       } else if (mounted) {
-        // 显示Toast通知用户文件已复制但未能读取标签信息
-        Fluttertoast.showToast(
-          msg: '文件已复制到缓存，但未能读取标签信息',
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
+        // 显示对话框通知用户文件已复制但未能读取标签信息
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('读取失败'),
+              content: const Text('文件已复制到缓存，但未能读取标签信息'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
         );
       }
     } catch (e) {
@@ -364,10 +385,22 @@ class _MyHomePageState extends State<MyHomePage> {
       
       // 显示错误消息给用户
       if (mounted) {
-        Fluttertoast.showToast(
-          msg: '处理文件时出错: $e',
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('处理文件出错'),
+              content: Text('处理文件时出错: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
         );
       }
     }
