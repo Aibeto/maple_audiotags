@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   audiotags
   dynamic_color
+  file_selector_windows
   permission_handler_windows
 )
 

@@ -41,23 +41,23 @@ class MainActivity : FlutterActivity() {
                             return context.getExternalFilesDir(null)?.absolutePath?.replace("/Android/data/${context.packageName}/files", "") + "/" + split[1]
                         }
                     }
-                    uri.authority == "com.android.providers.downloads.documents" -> {
-                        val contentUri = android.net.Uri.parse("content://downloads/public_downloads")
-                        return getDataColumn(contentUri, docId.toLong().toString())
-                    }
-                    uri.authority == "com.android.providers.media.documents" -> {
-                        val split = docId.split(":").toTypedArray()
-                        val type = split[0]
-                        var contentUri: Uri? = null
-                        when (type) {
-                            "image" -> contentUri = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                            "video" -> contentUri = android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-                            "audio" -> contentUri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-                        }
-                        val selection = "_id=?"
-                        val selectionArgs = arrayOf(split[1])
-                        return getDataColumn(contentUri, selection, selectionArgs)
-                    }
+                    // uri.authority == "com.android.providers.downloads.documents" -> {
+                    //     val contentUri = android.net.Uri.parse("content://downloads/public_downloads")
+                    //     return getDataColumn(contentUri, docId.toLong().toString())
+                    // }
+                    // uri.authority == "com.android.providers.media.documents" -> {
+                    //     val split = docId.split(":").toTypedArray()
+                    //     val type = split[0]
+                    //     var contentUri: Uri? = null
+                    //     when (type) {
+                    //         "image" -> contentUri = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                    //         "video" -> contentUri = android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                    //         "audio" -> contentUri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                    //     }
+                    //     val selection = "_id=?"
+                    //     // val selectionArgs = arrayOf(split[1])
+                    //     return getDataColumn(contentUri, selection, selectionArgs)
+                    // }
                 }
             }
             "content".equals(uri.scheme, ignoreCase = true) -> {
@@ -89,6 +89,6 @@ class MainActivity : FlutterActivity() {
         return null
     }
     
-    private val context: android.content.Context
-        get() = this
+    // private val context: android.content.Context
+    //     get() = this
 }

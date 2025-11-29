@@ -7,8 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 // 导入共享偏好设置库，用于持久化存储用户设置
 import 'package:shared_preferences/shared_preferences.dart';
-// 导入文件选择器库，用于选择音乐文件
-import 'package:file_picker/file_picker.dart';
 // 导入Dart IO库，用于文件操作
 import 'dart:io';
 // 导入路径处理库
@@ -27,6 +25,12 @@ import 'package:fluttertoast/fluttertoast.dart';
 
 // 导入日期格式化库
 import 'package:intl/intl.dart';
+
+// 导入权限处理库
+import 'package:permission_handler/permission_handler.dart';
+
+// 导入文件选择器
+import 'package:file_selector/file_selector.dart';
 
 // 导入MethodChannel用于与原生通信
 import 'package:flutter/services.dart';
@@ -190,159 +194,179 @@ class _MyHomePageState extends State<MyHomePage> {
   // 创建与原生通信的MethodChannel
   static const platform = MethodChannel('aibeto.maple.audiotags/filepath');
 
+  // 请求存储权限
+  Future<bool> _requestFullStoragePermission() async {
+    if (Platform.isAndroid) {
+      // 检查Android版本
+      final androidVersion = int.tryParse(Platform.operatingSystemVersion.replaceAll(RegExp(r'[^\d.]'), '').split('.').first) ?? 0;
+      
+      if (androidVersion >= 11) {
+        // Android 11及以上版本使用MANAGE_EXTERNAL_STORAGE权限
+        var status = await Permission.manageExternalStorage.status;
+        if (!status.isGranted) {
+          // 请求MANAGE_EXTERNAL_STORAGE权限
+          status = await Permission.manageExternalStorage.request();
+          return status.isGranted;
+        }
+        return true;
+      } else {
+        // Android 10及以下版本使用传统存储权限
+        var status = await Permission.storage.status;
+        if (!status.isGranted) {
+          // 请求存储权限
+          status = await Permission.storage.request();
+          return status.isGranted;
+        }
+        return true;
+      }
+    }
+    return true;
+  }
+
   // 选择音乐文件的方法
   void _selectMusicFile() async {
-    // 使用file_picker选择音乐文件
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      // 按后缀名过滤文件
-      allowedExtensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'],
-      // 限制只能选择指定类型文件
-      type: FileType.custom,
-      // 只允许选择一个文件
-      allowMultiple: false,
-    );
-
-    // 检查用户是否选择了文件
-    if (result != null) {
-      // 获取选中的第一个文件
-      PlatformFile file = result.files.first;
-      
-      // 检查文件路径是否存在
-      if (file.path != null) {
-        try {
-          // 尝试获取真实文件路径（仅在Android上）
-          String? realPath;
-          if (Platform.isAndroid) {
-            try {
-              realPath = await platform.invokeMethod('getRealPathFromUri', {'uri': file.path});
-              if (kDebugMode) {
-                print('KDEBUG: 尝试获取真实路径: $realPath');
-              }
-            } catch (e) {
-              if (kDebugMode) {
-                print('KDEBUG: 获取真实路径失败: $e');
-              }
-            }
-          }
-          
-          // 显示进度对话框
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('正在读取文件'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 20),
-                    Text('正在读取 ${file.name}...'),
-                  ],
-                ),
-              );
-            },
-          );
-          
-          // 获取应用缓存目录
-          Directory cacheDir = await getTemporaryDirectory();
-          // 获取当前日期作为文件夹名称
-          String dateFolder = DateFormat('yyyyMMdd').format(DateTime.now());
-          // 构建带日期的缓存目录路径
-          String datedCacheDirPath = path.join(cacheDir.path, 'audio_cache', dateFolder);
-          // 创建带日期的缓存目录
-          Directory datedCacheDir = Directory(datedCacheDirPath);
-          if (!await datedCacheDir.exists()) {
-            await datedCacheDir.create(recursive: true);
-          }
-          
-          // 构建原始文件的目标路径（加上"_original"后缀）
-          String originalFileName = '${path.basenameWithoutExtension(file.name)}_original${path.extension(file.name)}';
-          String targetPath = path.join(datedCacheDirPath, originalFileName);
-          
-          if (kDebugMode) {
-            print('KDEBUG: file_picker返回的路径(可能是缓存路径): ${file.path}');
-            if (realPath != null) {
-              print('KDEBUG: 获取到的真实文件路径: $realPath');
-            }
-            print('KDEBUG: 带日期的缓存目录: $datedCacheDirPath');
-            print('KDEBUG: 原始文件在缓存中的路径: $targetPath');
-          }
-          
-          // 将选中的文件复制到缓存目录，覆盖已存在的同名文件
-          await File(file.path!).copy(targetPath);
-          
-          if (kDebugMode) {
-            print('KDEBUG: 原始文件已成功复制到缓存');
-            print('KDEBUG: 缓存中的原始文件是否存在: ${await File(targetPath).exists()}');
-            print('KDEBUG: 缓存中的原始文件大小: ${await File(targetPath).length()} 字节');
-          }
-          
-          // 关闭进度对话框
-          Navigator.of(context).pop();
-          
-          // 调用edit.dart中的函数读取音频标签
-          final tags = await readAudioTags(targetPath);
-          
-          if (kDebugMode) {
-            print('读取到的标签: $tags');
-          }
-          
-          // 如果成功读取标签，则导航到标签编辑界面
-          // 传递缓存中的原始文件路径和真实路径（如果有的话）
-          if (tags != null && mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TagEditorUI(
-                  tag: tags, 
-                  filePath: targetPath, // 使用缓存中的原始文件路径
-                  realFilePath: realPath, // 传递真实文件路径（如果有）
-                ),
-              ),
-            );
-          } else if (mounted) {
-            // 显示Toast通知用户文件已复制但未能读取标签信息
-            Fluttertoast.showToast(
-              msg: '文件已复制到缓存，但未能读取标签信息',
-              toastLength: Toast.LENGTH_LONG,
-              gravity: ToastGravity.BOTTOM,
-            );
-          }
-        } catch (e) {
-          // 关闭进度对话框
-          Navigator.of(context).pop();
-          
-          // 处理文件复制错误
-          if (kDebugMode) {
-            if (kDebugMode) {
-              print('处理文件时出现异常: $e');
-            }
-          }
-          if (mounted) {
-            Fluttertoast.showToast(
-              msg: '处理文件时出错: $e',
-              toastLength: Toast.LENGTH_LONG,
-              gravity: ToastGravity.BOTTOM,
-            );
-          }
-        }
-      } else {
-        // 文件路径为空时的处理
-        if (mounted) {
-          Fluttertoast.showToast(
-            msg: '无法获取文件路径',
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-          );
-        }
-      }
-    } else {
-      // 用户取消了选择
+    // 请求完全存储权限
+    bool hasPermission = await _requestFullStoragePermission();
+    if (!hasPermission) {
       if (mounted) {
         Fluttertoast.showToast(
-          msg: '未选择任何文件',
-          toastLength: Toast.LENGTH_SHORT,
+          msg: '需要完全存储权限才能选择和修改文件',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
+      return;
+    }
+
+    try {
+      // 使用file_selector选择音频文件
+      const XTypeGroup typeGroup = XTypeGroup(
+        label: 'audio',
+        extensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'],
+      );
+      
+      final List<XFile> files = await openFiles(
+        acceptedTypeGroups: [typeGroup],
+        confirmButtonText: '选择音频文件',
+      );
+      
+      // 检查用户是否选择了文件
+      if (files.isEmpty) {
+        // 用户取消了选择
+        return;
+      }
+      
+      // 只处理第一个文件（因为我们希望是单文件选择）
+      final XFile selectedFile = files.first;
+      final String fileName = path.basename(selectedFile.path);
+      // 记录原始文件路径
+      final String originalFilePath = selectedFile.path;
+      
+      if (kDebugMode) {
+        print('KDEBUG: 用户选择的文件路径: $originalFilePath');
+        print('KDEBUG: 用户选择的文件名: $fileName');
+      }
+      
+      // 显示进度对话框
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('正在读取文件'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 20),
+                  Text('正在读取 $fileName...'),
+                ],
+              ),
+            );
+          },
+        );
+      }
+      
+      // 获取应用缓存目录
+      Directory cacheDir = await getTemporaryDirectory();
+      // 获取当前日期作为文件夹名称
+      String dateFolder = DateFormat('yyyyMMdd').format(DateTime.now());
+      // 构建带日期的缓存目录路径
+      String datedCacheDirPath = path.join(cacheDir.path, 'audio_cache', dateFolder);
+      // 创建带日期的缓存目录
+      Directory datedCacheDir = Directory(datedCacheDirPath);
+      if (!await datedCacheDir.exists()) {
+        await datedCacheDir.create(recursive: true);
+      }
+      
+      // 构建原始文件的目标路径（加上"_original"后缀）
+      String originalFileName = '${path.basenameWithoutExtension(fileName)}_original${path.extension(fileName)}';
+      String targetPath = path.join(datedCacheDirPath, originalFileName);
+      
+      if (kDebugMode) {
+        print('KDEBUG: 原始文件路径: $originalFilePath');
+        print('KDEBUG: 缓存目录: $datedCacheDirPath');
+        print('KDEBUG: 缓存中的原始文件路径: $targetPath');
+      }
+      
+      // 将选中的文件复制到缓存目录，覆盖已存在的同名文件
+      await selectedFile.saveTo(targetPath);
+      
+      if (kDebugMode) {
+        print('KDEBUG: 原始文件已成功复制到缓存');
+        print('KDEBUG: 缓存中的原始文件是否存在: ${await File(targetPath).exists()}');
+        print('KDEBUG: 缓存中的原始文件大小: ${await File(targetPath).length()} 字节');
+      }
+      
+      // 关闭进度对话框
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      
+      // 调用edit.dart中的函数读取音频标签
+      final tags = await readAudioTags(targetPath);
+      
+      if (kDebugMode) {
+        print('读取到的标签: $tags');
+      }
+      
+      // 如果成功读取标签，则导航到标签编辑界面
+      // 传递缓存中的原始文件路径和真实的文件路径
+      if (tags != null && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TagEditorUI(
+              tag: tags, 
+              filePath: targetPath, // 使用缓存中的原始文件路径
+              realFilePath: originalFilePath, // 传递真实的原始文件路径
+            ),
+          ),
+        );
+      } else if (mounted) {
+        // 显示Toast通知用户文件已复制但未能读取标签信息
+        Fluttertoast.showToast(
+          msg: '文件已复制到缓存，但未能读取标签信息',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
+    } catch (e) {
+      // 关闭可能仍在显示的进度对话框
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      
+      if (kDebugMode) {
+        print('选择或处理文件时出错: $e');
+      }
+      
+      // 显示错误消息给用户
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: '处理文件时出错: $e',
+          toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
         );
       }

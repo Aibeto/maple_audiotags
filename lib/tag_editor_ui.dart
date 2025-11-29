@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
+
 import 'dart:io' show Platform, File;
 import 'package:path/path.dart' as path;
 import 'package:intl/intl.dart';
@@ -141,208 +142,12 @@ class _TagEditorUIState extends State<TagEditorUI> {
           },
         );
 
-        // 检查并请求权限（仅在需要的平台上）
-        if (Platform.isAndroid) {
-          // 根据Android版本处理不同的存储权限
-          final androidVersion = int.tryParse(Platform.operatingSystemVersion.replaceAll(RegExp(r'[^\d.]'), '').split('.').first) ?? 0;
-          
-          if (androidVersion >= 10) {
-            // Android 10及以上版本
-            if (kDebugMode) {
-              print('KDEBUG: 检测到 Android 10+ (版本 $androidVersion)，正在检查适当的存储权限');
-            }
-            
-            // 从Android 10开始，外部存储访问发生了重大变化
-            if (androidVersion >= 11) {
-              // Android 11及以上版本使用MANAGE_EXTERNAL_STORAGE权限
-              var manageStorageStatus = await Permission.manageExternalStorage.status;
-              if (!manageStorageStatus.isGranted) {
-                if (kDebugMode) {
-                  print('KDEBUG: 正在请求 MANAGE_EXTERNAL_STORAGE 权限');
-                }
-                
-                // 请求MANAGE_EXTERNAL_STORAGE权限
-                manageStorageStatus = await Permission.manageExternalStorage.request();
-                if (!manageStorageStatus.isGranted) {
-                  // 如果权限申请失败，则引导用户到设置页面
-                  if (mounted) {
-                    Navigator.of(context).pop(); // 关闭进度对话框
-                    Fluttertoast.showToast(
-                      msg: '请在设置中授予"所有文件访问"权限',
-                      toastLength: Toast.LENGTH_LONG,
-                      gravity: ToastGravity.BOTTOM,
-                    );
-                    if (kDebugMode) {
-                      print('请在设置中授予"所有文件访问"权限');
-                    }
-                    
-                    // 引导用户到设置页面
-                    await openAppSettings();
-                    return;
-                  }
-                }
-              }
-            } else {
-              // Android 10使用传统的存储权限
-              var storageStatus = await Permission.storage.status;
-              if (!storageStatus.isGranted) {
-                if (kDebugMode) {
-                  print('KDEBUG: 正在为 Android 10 请求存储权限');
-                }
-                
-                // 请求存储权限
-                storageStatus = await Permission.storage.request();
-                if (!storageStatus.isGranted) {
-                  // 如果权限申请失败，则使用回退方案
-                  if (mounted) {
-                    Navigator.of(context).pop(); // 关闭进度对话框
-                    Fluttertoast.showToast(
-                      msg: '存储权限不足，将使用文件保存器保存',
-                      toastLength: Toast.LENGTH_LONG,
-                      gravity: ToastGravity.BOTTOM,
-                    );
-                    if (kDebugMode) {
-                      print('存储权限不足，将使用文件保存器保存');
-                    }
-                    
-                    // 使用回退方案保存文件
-                    await _saveWithFileSaver();
-                    return;
-                  }
-                }
-              }
-            }
-          } else {
-            // Android 9及以下版本
-            if (kDebugMode) {
-              print('KDEBUG: 检测到 Android 9 或更低版本 (版本 $androidVersion)，正在检查存储权限');
-            }
-            
-            // 检查写入存储权限
-            var writeStatus = await Permission.storage.status;
-            if (!writeStatus.isGranted) {
-              if (kDebugMode) {
-                print('KDEBUG: 正在请求 WRITE_EXTERNAL_STORAGE 权限');
-              }
-              // 如果没有权限，则请求权限
-              writeStatus = await Permission.storage.request();
-              if (!writeStatus.isGranted) {
-                // 如果权限申请失败，则使用回退方案
-                if (mounted) {
-                  Navigator.of(context).pop(); // 关闭进度对话框
-                  Fluttertoast.showToast(
-                    msg: '存储权限不足，将使用文件保存器保存',
-                    toastLength: Toast.LENGTH_LONG,
-                    gravity: ToastGravity.BOTTOM,
-                  );
-                  if (kDebugMode) {
-                    print('存储权限不足，将使用文件保存器保存');
-                  }
-                  
-                  // 使用回退方案保存文件
-                  await _saveWithFileSaver();
-                  return;
-                }
-              }
-            }
-          }
-        }
-
-        // 创建新的标签对象
-        final updatedTag = Tag(
-          title: _titleController.text,
-          trackArtist: _artistController.text,
-          album: _albumController.text,
-          albumArtist: _albumArtistController.text,
-          genre: _genreController.text,
-          year: _yearController.text.isNotEmpty ? int.tryParse(_yearController.text) : null,
-          trackNumber: _trackNumberController.text.isNotEmpty ? int.tryParse(_trackNumberController.text) : null,
-          trackTotal: _trackTotalController.text.isNotEmpty ? int.tryParse(_trackTotalController.text) : null,
-          discNumber: _discNumberController.text.isNotEmpty ? int.tryParse(_discNumberController.text) : null,
-          discTotal: _discTotalController.text.isNotEmpty ? int.tryParse(_discTotalController.text) : null,
-          lyrics: _lyricsController.text,
-          duration: widget.tag.duration, // 保持原始时长
-          bpm: _bpmController.text.isNotEmpty ? double.tryParse(_bpmController.text) : null,
-          pictures: widget.tag.pictures, // 保持原始图片
-        );
-
-        // 确定要写入的文件路径
-        String targetFilePath = widget.realFilePath ?? widget.filePath;
-        
-        if (kDebugMode) {
-          print('KDEBUG: 尝试将标签保存到文件: $targetFilePath');
-          print('KDEBUG: 写入前文件是否存在: ${await File(targetFilePath).exists()}');
-        }
-
-        // 直接写入目标文件
-        await AudioTags.write(targetFilePath, updatedTag);
-        
-        if (kDebugMode) {
-          print('KDEBUG: 成功将标签写入文件: $targetFilePath');
-          print('KDEBUG: 写入后文件是否存在: ${await File(targetFilePath).exists()}');
-          print('KDEBUG: 写入后文件大小: ${await File(targetFilePath).length()} 字节');
-        }
-        
-        // 如果使用的是缓存文件，也要更新缓存文件
-        if (widget.realFilePath != null) {
-          if (kDebugMode) {
-            print('KDEBUG: 同时更新缓存文件: ${widget.filePath}');
-          }
-          
-          await AudioTags.write(widget.filePath, updatedTag);
-          
-          if (kDebugMode) {
-            print('KDEBUG: 成功更新缓存文件: ${widget.filePath}');
-            print('KDEBUG: 缓存文件是否存在: ${await File(widget.filePath).exists()}');
-            print('KDEBUG: 缓存文件大小: ${await File(widget.filePath).length()} 字节');
-          }
-        }
-        
-        // 在同一目录下创建一个带时间戳的修改版本文件
-        // 获取文件所在的目录
-        String fileDirectory = path.dirname(targetFilePath);
-        // 获取文件名（不含扩展名）和扩展名
-        String fileNameWithoutExtension = path.basenameWithoutExtension(targetFilePath);
-        String fileExtension = path.extension(targetFilePath);
-        // 获取当前时间戳
-        String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-        // 构建修改后的文件路径（加上时间戳）
-        String modifiedFilePath = path.join(fileDirectory, '${fileNameWithoutExtension}_modified_${timestamp}$fileExtension');
-        
-        if (kDebugMode) {
-          print('KDEBUG: 同时在同一目录下创建修改版本文件: $modifiedFilePath');
-        }
-        
-        // 先复制当前文件
-        await File(targetFilePath).copy(modifiedFilePath);
-        // 然后写入更新后的标签到修改版本文件
-        await AudioTags.write(modifiedFilePath, updatedTag);
-        
-        if (kDebugMode) {
-          print('KDEBUG: 成功创建修改版本文件: $modifiedFilePath');
-          print('KDEBUG: 修改版本文件是否存在: ${await File(modifiedFilePath).exists()}');
-          print('KDEBUG: 修改版本文件大小: ${await File(modifiedFilePath).length()} 字节');
-        }
-        
-        // 关闭进度对话框
+        // 无条件使用文件保存器让用户选择保存位置
         if (mounted) {
-          Navigator.of(context).pop();
-          
-          // 显示成功消息
-          Fluttertoast.showToast(
-            msg: '标签保存成功',
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-          );
-          
-          if (kDebugMode) {
-            print('KDEBUG: 标签已成功保存到文件: $targetFilePath');
-            if (widget.realFilePath != null) {
-              print('KDEBUG: 同时更新了缓存文件: ${widget.filePath}');
-            }
-            print('KDEBUG: 同时创建了修改版本文件: $modifiedFilePath');
-          }
+          Navigator.of(context).pop(); // 关闭进度对话框
         }
+        await _saveWithFileSaver();
+        return;
       } on PlatformException catch (e) {
         // 关闭进度对话框
         if (mounted) {
@@ -400,7 +205,7 @@ class _TagEditorUIState extends State<TagEditorUI> {
         pictures: widget.tag.pictures, // 保持原始图片
       );
 
-      // 确定要写入的文件路径
+      // 确定要写入的文件路径 - 优先使用真实文件路径
       String targetFilePath = widget.realFilePath ?? widget.filePath;
       
       if (kDebugMode) {
@@ -424,9 +229,9 @@ class _TagEditorUIState extends State<TagEditorUI> {
       String timestampedFileName = '${fileNameWithoutExtension}_modified_${timestamp}$fileExtension';
       
       // 使用文件选择器让用户选择保存位置
-      String? outputFile = await FilePicker.platform.saveFile(
-        dialogTitle: '请选择保存位置:',
-        fileName: timestampedFileName,
+      final FileSaveLocation? outputFile = await getSaveLocation(
+        suggestedName: timestampedFileName,
+        acceptedTypeGroups: [const XTypeGroup(label: 'audio', extensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'])],
       );
 
       if (outputFile != null) {
@@ -436,12 +241,12 @@ class _TagEditorUIState extends State<TagEditorUI> {
         }
         
         // 将文件复制到用户选择的位置
-        await File(targetFilePath).copy(outputFile);
+        final saveFile = XFile(targetFilePath);
+        await saveFile.saveTo(outputFile as String);
         
         if (kDebugMode) {
           print('KDEBUG: 文件已成功复制到: $outputFile');
-          print('KDEBUG: 输出文件是否存在: ${await File(outputFile).exists()}');
-          print('KDEBUG: 输出文件大小: ${await File(outputFile).length()} 字节');
+          // 注意：由于这是文件系统路径，我们不能直接检查是否存在
         }
         
         if (mounted) {
@@ -645,13 +450,17 @@ class _TagEditorUIState extends State<TagEditorUI> {
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _lyricsController,
-                decoration: const InputDecoration(
-                  labelText: '歌词',
-                  border: OutlineInputBorder(),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.75,
+                child: TextFormField(
+                  controller: _lyricsController,
+                  decoration: const InputDecoration(
+                    labelText: '歌词',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: null,
+                  expands: true,
                 ),
-                maxLines: 28,
               ),
               // const SizedBox(height: 24),
               // Center(
