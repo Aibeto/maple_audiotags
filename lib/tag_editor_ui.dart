@@ -2,10 +2,10 @@
 // ignore_for_file: depend_on_referenced_packages, deprecated_member_use
 
 import 'dart:async';
-// 添加这一行以引入pi常量
 import 'dart:io' show Platform, File;
 import 'dart:ui' as ui;
 import 'dart:math';
+import 'dart:convert'; // 添加用于计算MD5哈希值
 
 import 'package:audiotags/audiotags.dart';
 import 'package:file_selector/file_selector.dart';
@@ -17,6 +17,7 @@ import 'package:intl/intl.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:crypto/crypto.dart'; // 添加用于计算MD5哈希值
 
 /// 音频标签编辑UI组件
 /// 提供一个表单界面用于查看和编辑音频文件的标签信息
@@ -29,6 +30,7 @@ class TagEditorUI extends StatefulWidget {
     required this.tag,
     required this.filePath,
     this.realFilePath,
+    this.additionalFiles,
   });
 
   /// 音频文件的标签信息
@@ -39,6 +41,9 @@ class TagEditorUI extends StatefulWidget {
   
   /// 真实文件路径（如果可以获取到的话）
   final String? realFilePath;
+  
+  /// 额外的文件列表（用于批量编辑模式）
+  final List<String>? additionalFiles;
 
   @override
   State<TagEditorUI> createState() => _TagEditorUIState();
@@ -266,7 +271,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     _extensionController = TextEditingController(text: fileExtension);
     
     // 初始化封面图片
-    if (widget.tag.pictures.isNotEmpty) {
+    // 批量编辑模式下默认不显示封面图片，除非所有文件的封面MD5一致
+    final bool isBatchMode = widget.additionalFiles != null && widget.additionalFiles!.isNotEmpty;
+    if (!isBatchMode && widget.tag.pictures.isNotEmpty) {
       _currentCoverImage = widget.tag.pictures.first.bytes;
     }
     
@@ -284,6 +291,111 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     
     // 不再使用定时器刷新，改用更高效的方式处理图片渲染
     // 图片会在旋转动画中自然重新渲染，无需额外处理
+    
+    // 如果是批量编辑模式，检查所有文件的封面是否一致
+    if (isBatchMode) {
+      _checkAndLoadConsistentCoverImage();
+    }
+  }
+
+  /// 检查所有文件的封面是否一致，如果一致则加载显示
+  Future<void> _checkAndLoadConsistentCoverImage() async {
+    try {
+      if (kDebugMode) {
+        print('KDEBUG: 检查批量编辑模式下的封面一致性');
+      }
+      
+      // 获取所有文件路径
+      final List<String> allFiles = [
+        widget.filePath,
+        if (widget.additionalFiles != null) ...widget.additionalFiles!
+      ];
+      
+      if (kDebugMode) {
+        print('KDEBUG: 总共 ${allFiles.length} 个文件需要检查');
+        // 打印所有文件路径用于调试
+        for (int i = 0; i < allFiles.length; i++) {
+          print('KDEBUG: 文件 $i: ${allFiles[i]}');
+        }
+      }
+      
+      // 读取所有文件的标签
+      List<Tag?> tags = [];
+      for (String filePath in allFiles) {
+        if (kDebugMode) {
+          print('KDEBUG: 正在读取文件标签: $filePath');
+        }
+        final tag = await AudioTags.read(filePath);
+        tags.add(tag);
+      }
+      
+      if (kDebugMode) {
+        print('KDEBUG: 成功读取 ${tags.length} 个标签');
+      }
+      
+      // 检查是否有封面图片
+      bool hasCoverInAllFiles = true;
+      for (int i = 0; i < tags.length; i++) {
+        Tag? tag = tags[i];
+        if (tag == null || tag.pictures.isEmpty) {
+          hasCoverInAllFiles = false;
+          if (kDebugMode) {
+            print('KDEBUG: 文件 $i 没有封面图片');
+          }
+          break;
+        }
+      }
+      
+      if (!hasCoverInAllFiles) {
+        if (kDebugMode) {
+          print('KDEBUG: 并非所有文件都有封面图片');
+        }
+        return;
+      }
+      
+      // 计算所有封面的MD5哈希值
+      List<String> coverMD5s = [];
+      for (int i = 0; i < tags.length; i++) {
+        Tag? tag = tags[i];
+        if (tag != null && tag.pictures.isNotEmpty) {
+          final bytes = tag.pictures.first.bytes;
+          final digest = md5.convert(bytes);
+          coverMD5s.add(digest.toString());
+          if (kDebugMode) {
+            print('KDEBUG: 文件 $i 封面MD5: ${digest.toString()}');
+          }
+        }
+      }
+      
+      if (kDebugMode) {
+        print('KDEBUG: 计算得到 ${coverMD5s.length} 个封面MD5');
+      }
+      
+      // 检查所有MD5是否一致
+      bool allCoversSame = coverMD5s.every((md5) => md5 == coverMD5s.first);
+      
+      if (allCoversSame) {
+        if (kDebugMode) {
+          print('KDEBUG: 所有文件的封面一致，显示第一个文件的封面');
+        }
+        
+        // 如果所有封面一致，则显示第一个文件的封面
+        if (mounted) {
+          setState(() {
+            _currentCoverImage = tags.first?.pictures.first.bytes;
+          });
+        }
+      } else {
+        if (kDebugMode) {
+          print('KDEBUG: 文件封面不一致，不显示封面');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('KDEBUG: 检查封面一致性时出错: $e');
+        print('KDEBUG: 错误堆栈: ${StackTrace.current}');
+      }
+    }
   }
 
   /// 创建带液态玻璃效果的对话框
@@ -428,7 +540,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             
             // 还原封面图片
             Uint8List? originalImage;
-            if (widget.tag.pictures.isNotEmpty) {
+            final bool isBatchMode = widget.additionalFiles != null && widget.additionalFiles!.isNotEmpty;
+            if (!isBatchMode && widget.tag.pictures.isNotEmpty) {
               originalImage = widget.tag.pictures.first.bytes;
             }
             
@@ -483,9 +596,16 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           ),
         );
 
-        // 直接保存到当前编辑的文件
-        await _saveDirectly();
-        return;
+        // 检查是否为批量编辑模式
+        final bool isBatchMode = widget.additionalFiles != null && widget.additionalFiles!.isNotEmpty;
+        
+        if (isBatchMode) {
+          // 批量编辑模式下保存所有文件
+          await _saveAllFiles();
+        } else {
+          // 单文件模式下直接保存
+          await _saveDirectly();
+        }
       } on PlatformException catch (e) {
         // 关闭进度对话框
         if (mounted) {
@@ -538,6 +658,281 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     }
   }
 
+  /// 批量保存所有文件
+  Future<void> _saveAllFiles() async {
+    try {
+      if (kDebugMode) {
+        print('KDEBUG: 开始批量保存文件');
+      }
+      
+      // 获取所有文件路径
+      final List<String> allFiles = [
+        widget.filePath,
+        if (widget.additionalFiles != null) ...widget.additionalFiles!
+      ];
+      
+      if (kDebugMode) {
+        print('KDEBUG: 总共需要保存 ${allFiles.length} 个文件');
+        for (int i = 0; i < allFiles.length; i++) {
+          print('KDEBUG: 文件 $i: ${allFiles[i]}');
+        }
+      }
+      
+      // 为每个文件创建相同的标签数据
+      List<Picture>? pictures;
+      if (_currentCoverImage != null) {
+        pictures = [Picture(bytes: _currentCoverImage!, mimeType: MimeType.jpeg, pictureType: PictureType.other)];
+      }
+      
+      // 创建新的标签对象
+      final updatedTag = Tag(
+        title: _titleController.text,
+        trackArtist: _artistController.text,
+        album: _albumController.text,
+        albumArtist: _albumArtistController.text,
+        genre: _genreController.text,
+        year: _yearController.text.isNotEmpty ? int.tryParse(_yearController.text) : null,
+        trackNumber: _trackNumberController.text.isNotEmpty ? int.tryParse(_trackNumberController.text) : null,
+        trackTotal: _trackTotalController.text.isNotEmpty ? int.tryParse(_trackTotalController.text) : null,
+        discNumber: _discNumberController.text.isNotEmpty ? int.tryParse(_discNumberController.text) : null,
+        discTotal: _discTotalController.text.isNotEmpty ? int.tryParse(_discTotalController.text) : null,
+        lyrics: _lyricsController.text,
+        duration: widget.tag.duration, // 保持原始时长
+        bpm: _bpmController.text.isNotEmpty ? double.tryParse(_bpmController.text) : null,
+        pictures: pictures ?? const [], // 使用新的图片数据，如果为空则使用空列表
+      );
+      
+      // 保存所有文件并收集结果
+      int successCount = 0;
+      List<String> failedFiles = [];
+      
+      for (int i = 0; i < allFiles.length; i++) {
+        String filePath = allFiles[i];
+        if (kDebugMode) {
+          print('KDEBUG: 正在保存文件 $i: $filePath');
+        }
+        
+        try {
+          await AudioTags.write(filePath, updatedTag);
+          successCount++;
+          if (kDebugMode) {
+            print('KDEBUG: 文件保存成功: $filePath');
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('KDEBUG: 保存文件时出错 $filePath: $e');
+          }
+          failedFiles.add(filePath);
+          // 继续保存其他文件，不中断整个过程
+        }
+      }
+      
+      if (kDebugMode) {
+        print('KDEBUG: 所有文件保存完成，成功: $successCount，失败: ${failedFiles.length}');
+      }
+      
+      // 为每个文件分别执行导出流程
+      await _saveEachFileWithFileSaver(allFiles, successCount, failedFiles);
+    } catch (e) {
+      if (kDebugMode) {
+        print('KDEBUG: 批量保存标签失败: $e');
+      }
+      rethrow;
+    }
+  }
+  
+  /// 为每个文件分别执行导出流程
+  Future<void> _saveEachFileWithFileSaver(List<String> allFiles, int successCount, List<String> failedFiles) async {
+    if (kDebugMode) {
+      print('KDEBUG: 开始为每个文件执行保存流程，总文件数: ${allFiles.length}');
+    }
+    
+    // 关闭之前的进度对话框
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+    
+    // 显示批量保存进度
+    if (mounted) {
+      _showGlassDialog(
+        title: const Text('批量保存'),
+        content: Text('正在保存文件...\n已完成: 0/${allFiles.length}'),
+      );
+    }
+    
+    int savedCount = 0;
+    List<String> saveFailedFiles = [];
+    
+    // 为每个文件执行保存操作
+    for (int i = 0; i < allFiles.length; i++) {
+      String filePath = allFiles[i];
+      String fileName = path.basenameWithoutExtension(filePath);
+      String fileExtension = path.extension(filePath);
+      
+      // 删除文件名末尾的"_original"后缀（如果存在）
+      if (fileName.endsWith('_original')) {
+        fileName = fileName.substring(0, fileName.length - 9); // "_original" 长度为9
+      }
+      
+      try {
+        if (kDebugMode) {
+          print('KDEBUG: 正在保存文件 $i: $filePath');
+          print('KDEBUG: 处理后的文件名: $fileName$fileExtension');
+        }
+        
+        // 更新进度显示
+        if (mounted) {
+          Navigator.of(context).pop(); // 关闭之前的对话框
+          _showGlassDialog(
+            title: const Text('批量保存'),
+            content: Text('正在保存文件...\n已完成: $savedCount/${allFiles.length}\n当前: $fileName$fileExtension'),
+          );
+        }
+        
+        // 构建不带时间戳和_modified后缀的文件名
+        String cleanFileName = fileName;
+        if (cleanFileName.endsWith('_modified')) {
+          cleanFileName = cleanFileName.substring(0, cleanFileName.length - 9); // "_modified" 长度为9
+        }
+        
+        String suggestedFileName = '$cleanFileName$fileExtension';
+        
+        if (kDebugMode) {
+          print('KDEBUG: 保存文件建议名: $suggestedFileName');
+        }
+        
+        // 根据不同平台使用不同的保存方法
+        if (Platform.isAndroid) {
+          // 在Android上使用替代方法保存文件
+          await _saveFileForAndroidSingle(filePath, fileName, fileExtension, "");
+        } else {
+          // 使用文件选择器让用户选择保存位置
+          final FileSaveLocation? outputFile = await getSaveLocation(
+            suggestedName: suggestedFileName,
+            acceptedTypeGroups: [XTypeGroup(label: 'audio', extensions: [fileExtension.replaceFirst('.', '')])],
+          );
+          
+          if (outputFile != null) {
+            if (kDebugMode) {
+              print('KDEBUG: 用户选择的输出文件路径: $outputFile');
+              print('KDEBUG: 从缓存文件复制: $filePath');
+            }
+            
+            // 将文件复制到用户选择的位置
+            final saveFile = XFile(filePath);
+            await saveFile.saveTo(outputFile as String);
+            
+            if (kDebugMode) {
+              print('KDEBUG: 文件已成功复制到: $outputFile');
+            }
+          } else {
+            // 用户取消了保存操作
+            saveFailedFiles.add(filePath);
+            if (kDebugMode) {
+              print('KDEBUG: 用户取消了保存操作: $filePath');
+            }
+          }
+        }
+        
+        savedCount++;
+      } catch (e) {
+        saveFailedFiles.add(filePath);
+        if (kDebugMode) {
+          print('KDEBUG: 保存文件时出错 $filePath: $e');
+        }
+      }
+    }
+    
+    // 显示最终结果
+    if (mounted) {
+      Navigator.of(context).pop(); // 关闭进度对话框
+      
+      String resultMessage = '标签保存完成:\n'
+          '成功保存标签: $successCount/${allFiles.length}\n'
+          '成功保存文件: $savedCount/${allFiles.length}';
+      
+      if (failedFiles.isNotEmpty) {
+        resultMessage += '\n标签保存失败: ${failedFiles.length} 个文件';
+      }
+      
+      if (saveFailedFiles.isNotEmpty) {
+        resultMessage += '\n文件保存失败: ${saveFailedFiles.length} 个文件';
+      }
+      
+      _showGlassDialog(
+        title: const Text('批量操作完成'),
+        content: Text(resultMessage),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      );
+    }
+  }
+  
+  /// Android平台的单文件保存方法
+  Future<void> _saveFileForAndroidSingle(String sourceFilePath, String baseFileName, String fileExtension, String timestamp) async {
+    try {
+      if (kDebugMode) {
+        print('KDEBUG: 使用Android平台单文件保存方法');
+        print('KDEBUG: 源文件路径: $sourceFilePath');
+        print('KDEBUG: 基础文件名: $baseFileName');
+        print('KDEBUG: 文件扩展名: $fileExtension');
+      }
+      
+      // 检查并请求存储权限
+      bool hasPermission = await _requestStoragePermission();
+      if (!hasPermission) {
+        if (kDebugMode) {
+          print('KDEBUG: 存储权限被拒绝');
+        }
+        return;
+      }
+      
+      // 构建不带_modified后缀的文件名
+      String cleanFileName = baseFileName;
+      if (cleanFileName.endsWith('_modified')) {
+        cleanFileName = cleanFileName.substring(0, cleanFileName.length - 9); // "_modified" 长度为9
+      }
+      
+      String targetFileName = '$cleanFileName$fileExtension';
+      
+      // 使用Android默认的下载目录
+      String downloadPath = '/sdcard/Download/$targetFileName';
+      File targetFile = File(downloadPath);
+      
+      // 确保目录存在
+      await targetFile.create(recursive: true);
+      
+      if (kDebugMode) {
+        print('KDEBUG: 尝试将文件保存到: $downloadPath');
+      }
+      
+      // 将缓存文件复制到下载目录
+      File sourceFile = File(sourceFilePath);
+      await sourceFile.copy(downloadPath);
+      
+      if (kDebugMode) {
+        print('KDEBUG: 文件已成功保存到: $downloadPath');
+      }
+      
+      Fluttertoast.showToast(
+        msg: '文件已保存到: $downloadPath',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('KDEBUG: Android平台单文件保存失败: $e');
+      }
+      rethrow;
+    }
+  }
+  
   /// 直接保存标签到当前文件，并提供选项将文件保存到用户指定位置
   Future<void> _saveDirectly() async {
     try {
@@ -616,6 +1011,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         print('KDEBUG: 当前平台: ${Platform.operatingSystem}');
       }
       
+      // 检查是否为批量编辑模式
+      final bool isBatchMode = widget.additionalFiles != null && widget.additionalFiles!.isNotEmpty;
+      
       // 根据不同平台使用不同的保存方法
       if (Platform.isAndroid) {
         // 在Android上使用替代方法保存文件
@@ -656,26 +1054,61 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         final saveFile = XFile(widget.filePath);
         await saveFile.saveTo(outputFile as String);
         
-        if (kDebugMode) {
-          print('KDEBUG: 文件已成功复制到: $outputFile');
-        }
-        
-        if (mounted) {
-          Navigator.of(context).pop(); // 关闭进度对话框
+        // 如果是批量编辑模式，提示用户其他文件也需要单独保存
+        if (isBatchMode) {
+          final List<String> allFiles = [
+            widget.filePath,
+            if (widget.additionalFiles != null) ...widget.additionalFiles!
+          ];
           
-          // 显示成功消息
-          _showGlassDialog(
-            title: const Text('保存成功'),
-            content: Text('文件已保存到: $outputFile'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('确定'),
-              ),
-            ],
-          );
+          if (kDebugMode) {
+            print('KDEBUG: 批量编辑模式，总共 ${allFiles.length} 个文件已保存标签');
+            print('KDEBUG: 其中第一个文件已导出到: $outputFile');
+          }
+          
+          if (mounted) {
+            Navigator.of(context).pop(); // 关闭进度对话框
+            
+            // 显示成功消息
+            _showGlassDialog(
+              title: const Text('保存成功'),
+              content: Text(
+                  '已保存 ${allFiles.length} 个文件的标签。\n'
+                  '第一个文件已导出到: $outputFile\n'
+                  '其他文件保存在缓存中，请手动导出。'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          }
+        } else {
+          // 单文件模式
+          if (kDebugMode) {
+            print('KDEBUG: 文件已成功复制到: $outputFile');
+          }
+          
+          if (mounted) {
+            Navigator.of(context).pop(); // 关闭进度对话框
+            
+            // 显示成功消息
+            _showGlassDialog(
+              title: const Text('保存成功'),
+              content: Text('文件已保存到: $outputFile'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          }
         }
       } else {
         // 用户取消了保存操作
@@ -1014,8 +1447,106 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     }
   }
 
+  /// 构建文件列表组件（使用文本输入框实现）
+  Widget _buildFileList() {
+    final List<String> allFiles = [
+      widget.filePath,
+      if (widget.additionalFiles != null) ...widget.additionalFiles!
+    ];
+    
+    // 构建文件列表文本，每个文件名占一行
+    final StringBuffer buffer = StringBuffer();
+    for (int i = 0; i < allFiles.length; i++) {
+      String fileName = path.basenameWithoutExtension(allFiles[i]);
+      String fileExtension = path.extension(allFiles[i]);
+      
+      // 删除文件名末尾的"_original"后缀（如果存在）
+      if (fileName.endsWith('_original')) {
+        fileName = fileName.substring(0, fileName.length - 9); // "_original" 长度为9
+      }
+      
+      buffer.write('$fileName$fileExtension');
+      if (i < allFiles.length - 1) {
+        buffer.write('\n'); // 每个文件名后添加换行符，除了最后一个
+      }
+    }
+    
+    // 创建一个文本控制器并设置文件列表文本
+    final TextEditingController fileListController = TextEditingController(text: buffer.toString());
+    
+    // 计算最大高度为屏幕高度的15%
+    final double maxHeight = MediaQuery.of(context).size.height * 0.15;
+    
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      margin: const EdgeInsets.all(4.0), // 与其他文本框统一外边距
+      child: Stack(
+        children: [
+          // 液态玻璃背景效果
+          Positioned.fill(
+            child: LiquidGlassLayer(
+              settings: LiquidGlassSettings(
+                thickness: 6,
+                blur: 0.5,
+                lightAngle: 0.3 * pi,
+                lightIntensity: 0.7,
+                ambientStrength: 0.2,
+                blend: 0.5,
+                refractiveIndex: 1.2,
+                chromaticAberration: 0.2,
+                saturation: 1.05,
+              ),
+              child: LiquidGlass.inLayer(
+                shape: LiquidRoundedRectangle(
+                  borderRadius: const Radius.circular(12.0),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.0),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.2)
+                        : Colors.white.withOpacity(0.2),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // 文本输入框（禁用编辑）
+          TextFormField(
+            controller: fileListController,
+            decoration: InputDecoration(
+              labelText: '文件列表',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.transparent,
+            ),
+            maxLines: null, // 允许多行
+            enabled: false, // 禁用编辑
+            textAlign: TextAlign.start, // 文本左对齐
+            style: const TextStyle(
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool isBatchMode = widget.additionalFiles != null && widget.additionalFiles!.isNotEmpty;
+    
     return Scaffold(
       body: Stack(
         children: [
@@ -1188,12 +1719,14 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                               border: Border.all(color: Colors.grey),
                               borderRadius: BorderRadius.circular(12.0),
                             ),
-                            child: const Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
-                                Text('点击添加封面图片', style: TextStyle(color: Colors.grey)),
-                              ],
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
+                                  Text('点击添加封面图片', style: TextStyle(color: Colors.grey)),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -1201,57 +1734,80 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                     ),
                   ),
                 ),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: _buildGlassTextFormField(
-                      controller: _filenameController,
-                      labelText: '文件名',
+              // 只有在非批量模式下才显示文件名和扩展名编辑框
+              if (!isBatchMode) ...[
+                // _buildGlassTextFormField(
+                //   controller: _filenameController,
+                //   labelText: '文件名',
+                // ),
+                // const SizedBox(height: 16),
+                // _buildGlassTextFormField(
+                //   controller: _extensionController,
+                //   labelText: '后缀',
+                // ),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: _buildGlassTextFormField(
+                        controller: _filenameController,
+                        labelText: '文件名',
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 1,
-                    child: _buildGlassTextFormField(
-                      controller: _extensionController,
-                      labelText: '后缀',
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 1,
+                      child: _buildGlassTextFormField(
+                        controller: _extensionController,
+                        labelText: '后缀',
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                  ],
+                )
+              // const SizedBox(height: 16),
+              ] else
+              
+                // 在批量模式下显示文件列表
+                _buildFileList(),
+                const SizedBox(height: 16),
+              // 标题单独一行（通常较长）
               _buildGlassTextFormField(
                 controller: _titleController,
                 labelText: '标题',
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildGlassTextFormField(
-                      controller: _artistController,
-                      labelText: '艺术家',
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildGlassTextFormField(
-                      controller: _albumController,
-                      labelText: '专辑',
-                    ),
-                  ),
-                ],
+              // 艺术家和专辑放在同一行
+              // Row(
+                // children: [
+                  // Expanded(
+                    // flex: 3,
+              _buildGlassTextFormField(
+                controller: _artistController,
+                labelText: '艺术家',
               ),
+                  // ),
               const SizedBox(height: 16),
+                  // Expanded(
+                    // flex: 4,
+              _buildGlassTextFormField(
+                controller: _albumController,
+                labelText: '专辑',
+              ),
+                  // ),
+                // ],
+              // ),
+              const SizedBox(height: 16),
+              // 专辑艺术家单独一行
               _buildGlassTextFormField(
                 controller: _albumArtistController,
                 labelText: '专辑艺术家',
               ),
               const SizedBox(height: 16),
+              // 流派、BPM、年份放在同一行
               Row(
                 children: [
                   Expanded(
+                    flex: 3,
                     child: _buildGlassTextFormField(
                       controller: _genreController,
                       labelText: '流派',
@@ -1259,26 +1815,30 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                   ),
                   const SizedBox(width: 16),
                   Expanded(
+                    flex: 2,
                     child: _buildGlassTextFormField(
                       controller: _bpmController,
                       labelText: 'BPM',
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
+                  const SizedBox(width: 16),
                   Expanded(
+                    flex: 2,
                     child: _buildGlassTextFormField(
                       controller: _yearController,
                       labelText: '年份',
                       keyboardType: TextInputType.number,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // 曲目号、曲目总数、光盘号放在同一行
+              Row(
+                children: [
                   Expanded(
+                    flex: 2,
                     child: _buildGlassTextFormField(
                       controller: _trackNumberController,
                       labelText: '曲目号',
@@ -1287,26 +1847,30 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                   ),
                   const SizedBox(width: 16),
                   Expanded(
+                    flex: 2,
                     child: _buildGlassTextFormField(
                       controller: _trackTotalController,
-                      labelText: '曲目总数',
+                      labelText: '曲目数',
                       keyboardType: TextInputType.number,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
+                  const SizedBox(width: 16),
                   Expanded(
+                    flex: 2,
                     child: _buildGlassTextFormField(
                       controller: _discNumberController,
                       labelText: '光盘号',
                       keyboardType: TextInputType.number,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // 光盘总数和时长放在同一行
+              Row(
+                children: [
                   Expanded(
+                    flex: 2,
                     child: _buildGlassTextFormField(
                       controller: _discTotalController,
                       labelText: '光盘总数',
@@ -1315,6 +1879,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                   ),
                   const SizedBox(width: 16),
                   Expanded(
+                    flex: 3,
                     child: _buildGlassTextFormField(
                       controller: _durationController,
                       labelText: '时长(秒)',

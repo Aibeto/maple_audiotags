@@ -47,6 +47,7 @@ dependencies:
   image: ^4.5.4
   liquid_glass_renderer: ^0.1.1-dev.10
   http: ^1.6.0
+  crypto: ^3.0.3
 
 
 dev_dependencies:
