@@ -1877,7 +1877,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                     flex: 2,
                     child: _buildGlassTextFormField(
                       controller: _discTotalController,
-                      labelText: '光盘总数',
+                      labelText: '光盘数',
                       keyboardType: TextInputType.number,
                     ),
                   ),

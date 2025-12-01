@@ -1,16 +1,9 @@
-# maple_audiotags
+# 枫糖标签
 
-A new Flutter project.
+使用Flutter开发的音乐标签编辑器。现已在Android和Windows完成调试。未来将支持iOS、macOS和Linux。
 
-## Getting Started
+## 编辑模式
 
-This project is a starting point for a Flutter application.
+支持查看和编辑文件名、后缀、封面、标题、艺术家、专辑、专辑艺术家、流派、BPM、年份、曲目号、曲目数、光盘号、光盘数、歌词。支持查看时长。
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+支持批量编辑（单次不超过100个）。
