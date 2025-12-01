@@ -5,10 +5,10 @@ import 'dart:async';
 import 'dart:io' show Platform, File;
 import 'dart:ui' as ui;
 import 'dart:math';
-import 'dart:convert'; // 添加用于计算MD5哈希值
+// 添加用于计算MD5哈希值
 
 import 'package:audiotags/audiotags.dart';
-import 'package:file_selector/file_selector.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +18,11 @@ import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:crypto/crypto.dart'; // 添加用于计算MD5哈希值
+
+
+// 上间距
+const kMarginTop = 16.0;
+
 
 /// 音频标签编辑UI组件
 /// 提供一个表单界面用于查看和编辑音频文件的标签信息
@@ -807,9 +812,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           await _saveFileForAndroidSingle(filePath, fileName, fileExtension, "");
         } else {
           // 使用文件选择器让用户选择保存位置
-          final FileSaveLocation? outputFile = await getSaveLocation(
-            suggestedName: suggestedFileName,
-            acceptedTypeGroups: [XTypeGroup(label: 'audio', extensions: [fileExtension.replaceFirst('.', '')])],
+          final String? outputFile = await FilePicker.platform.saveFile(
+            dialogTitle: '请选择保存位置:',
+            fileName: suggestedFileName,
           );
           
           if (outputFile != null) {
@@ -819,8 +824,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             }
             
             // 将文件复制到用户选择的位置
-            final saveFile = XFile(filePath);
-            await saveFile.saveTo(outputFile as String);
+            final saveFile = File(filePath);
+            await saveFile.copy(outputFile);
             
             if (kDebugMode) {
               print('KDEBUG: 文件已成功复制到: $outputFile');
@@ -1039,9 +1044,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       }
       
       // 使用文件选择器让用户选择保存位置
-      final FileSaveLocation? outputFile = await getSaveLocation(
-        suggestedName: timestampedFileName,
-        acceptedTypeGroups: [XTypeGroup(label: 'audio', extensions: [fileExtension.replaceFirst('.', '')])],
+      final String? outputFile = await FilePicker.platform.saveFile(
+        dialogTitle: '请选择保存位置:',
+        fileName: timestampedFileName,
       );
 
       if (outputFile != null) {
@@ -1051,8 +1056,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         }
         
         // 将文件复制到用户选择的位置
-        final saveFile = XFile(widget.filePath);
-        await saveFile.saveTo(outputFile as String);
+        final saveFile = File(widget.filePath);
+        await saveFile.copy(outputFile);
         
         // 如果是批量编辑模式，提示用户其他文件也需要单独保存
         if (isBatchMode) {
@@ -1134,9 +1139,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         }
       }
     } on UnimplementedError catch (e) {
-      // 处理getSaveLocation未实现的情况
+      // 处理文件保存器未实现的情况
       if (kDebugMode) {
-        print('KDEBUG: getSaveLocation()未实现: $e');
+        print('KDEBUG: 文件保存器未实现: $e');
         print('KDEBUG: 当前平台: ${Platform.operatingSystem}');
       }
       
@@ -1357,26 +1362,24 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   
   /// 选择新的封面图片
   Future<void> _selectNewCoverImage() async {
-    // 使用file_selector选择图片文件
-    const XTypeGroup typeGroup = XTypeGroup(
-      label: 'images',
-      extensions: ['jpg', 'jpeg', 'png', 'bmp', 'gif'],
-    );
-    
-    final XFile? selectedFile = await openFile(
-      acceptedTypeGroups: [typeGroup],
-      confirmButtonText: '选择图片文件',
+    // 使用file_picker选择图片文件
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'bmp', 'gif'],
     );
     
     // 检查用户是否选择了文件
-    if (selectedFile == null) {
+    if (result == null || result.files.isEmpty) {
       // 用户取消了选择
       return;
     }
     
+    final selectedFile = result.files.first;
+    
     try {
       // 直接读取文件内容为字节
-      final Uint8List imageData = await selectedFile.readAsBytes();
+      final Uint8List imageData = selectedFile.bytes ?? Uint8List(0);
       Fluttertoast.showToast(
         msg: '正在导入图片: ${selectedFile.name}',
         toastLength: Toast.LENGTH_LONG,

@@ -8,11 +8,11 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodCall
-import io.flutter.plugin.common.MethodResult
+// import io.flutter.plugin.common.MethodResult
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "aibeto.maple.audiotags/filepath"
-    private var pendingResult: MethodResult? = null
+    // private var pendingResult: MethodResult? = null
     
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -30,74 +30,74 @@ class MainActivity : FlutterActivity() {
                 }
                 "selectMultipleAudioFiles" -> {
                     val maxFiles = call.argument<Int>("maxFiles") ?: 100
-                    selectMultipleAudioFiles(maxFiles, result)
+                    // selectMultipleAudioFiles(maxFiles, result)
                 }
                 else -> result.notImplemented()
             }
         }
     }
     
-    private fun selectMultipleAudioFiles(maxFiles: Int, result: MethodResult) {
-        pendingResult = result
+    // private fun selectMultipleAudioFiles(maxFiles: Int, result: MethodResult) {
+        // pendingResult = result
         
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*" // 允许所有类型，后续会过滤音频文件
-            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(
-                "audio/mpeg", "audio/wav", "audio/flac", "audio/aac", "audio/ogg", "audio/mp4"
-            ))
-        }
+    //     val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+    //         addCategory(Intent.CATEGORY_OPENABLE)
+    //         type = "*/*" // 允许所有类型，后续会过滤音频文件
+    //         putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+    //         putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(
+    //             "audio/mpeg", "audio/wav", "audio/flac", "audio/aac", "audio/ogg", "audio/mp4"
+    //         ))
+    //     }
         
-        startActivityForResult(intent, 42)
-    }
+    //     startActivityForResult(intent, 42)
+    // }
     
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
+    // override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    //     super.onActivityResult(requestCode, resultCode, data)
         
-        if (requestCode == 42 && pendingResult != null) {
-            try {
-                val result = pendingResult!!
-                pendingResult = null
+    //     if (requestCode == 42 && pendingResult != null) {
+    //         try {
+    //             // val result = pendingResult!!
+    //             pendingResult = null
                 
-                if (resultCode == RESULT_OK && data != null) {
-                    val files = mutableListOf<Map<String, String>>()
+    //             if (resultCode == RESULT_OK && data != null) {
+    //                 val files = mutableListOf<Map<String, String>>()
                     
-                    // 处理单个或多个文件
-                    val clipData = data.clipData
-                    if (clipData != null) {
-                        // 多个文件
-                        for (i in 0 until clipData.itemCount) {
-                            if (files.size >= 100) break // 限制文件数量
+    //                 // 处理单个或多个文件
+    //                 val clipData = data.clipData
+    //                 if (clipData != null) {
+    //                     // 多个文件
+    //                     for (i in 0 until clipData.itemCount) {
+    //                         if (files.size >= 100) break // 限制文件数量
                             
-                            val uri = clipData.getItemAt(i).uri
-                            val realPath = getRealPathFromURI(uri)
-                            if (realPath != null) {
-                                files.add(mapOf("path" to realPath))
-                            }
-                        }
-                    } else {
-                        // 单个文件
-                        val uri = data.data
-                        if (uri != null) {
-                            val realPath = getRealPathFromURI(uri)
-                            if (realPath != null) {
-                                files.add(mapOf("path" to realPath))
-                            }
-                        }
-                    }
+    //                         val uri = clipData.getItemAt(i).uri
+    //                         val realPath = getRealPathFromURI(uri)
+    //                         if (realPath != null) {
+    //                             files.add(mapOf("path" to realPath))
+    //                         }
+    //                     }
+    //                 } else {
+    //                     // 单个文件
+    //                     val uri = data.data
+    //                     if (uri != null) {
+    //                         val realPath = getRealPathFromURI(uri)
+    //                         if (realPath != null) {
+    //                             files.add(mapOf("path" to realPath))
+    //                         }
+    //                     }
+    //                 }
                     
-                    result.success(files)
-                } else {
-                    result.success(null)
-                }
-            } catch (e: Exception) {
-                val result = pendingResult!!
-                pendingResult = null
-                result.error("ERROR", e.message, null)
-            }
-        }
-    }
+    //                 // result.success(files)
+    //             } else {
+    //                 // result.success(null)
+    //             }
+    //         } catch (e: Exception) {
+    //             val result = pendingResult!!
+    //             pendingResult = null
+    //             // result.error("ERROR", e.message, null)
+    //         }
+    //     }
+    // }
     
     private fun getRealPathFromURI(uri: Uri): String? {
         when {

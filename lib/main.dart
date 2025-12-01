@@ -1,7 +1,6 @@
 // 导入Flutter基础Material设计组件库
 // ignore_for_file: use_build_context_synchronously
 
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -17,9 +16,8 @@ import 'dart:math';
 // ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as path;
 // 导入Flutter服务库，用于获取应用目录
-import 'package:path_provider/path_provider.dart';
 // 导入批量编辑页面
-import 'batch_edit_page.dart';
+// import 'batch_edit_page.dart';
 // 导入标签编辑
 import 'edit.dart';
 // 导入标签编辑UI
@@ -27,17 +25,15 @@ import 'tag_editor_ui.dart';
 // 导入Toast库
 
 // 导入日期格式化库
-import 'package:intl/intl.dart';
 
 // 导入权限处理库
 import 'package:permission_handler/permission_handler.dart';
 
 // 导入文件选择器
-import 'package:file_selector/file_selector.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 // 导入网络图片加载库
-import 'package:flutter/services.dart' show rootBundle, MethodChannel;
 import 'package:http/http.dart' as http;
 
 // 程序入口点，使用async关键字支持异步操作
@@ -271,58 +267,70 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
 
+    // 显示"正在获取音频"对话框
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('正在获取音频'),
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 20),
+                Text('请稍候...'),
+              ],
+            ),
+          );
+        },
+      );
+    }
+    
+    // 等待一小段时间确保对话框显示出来
+    await Future.delayed(const Duration(milliseconds: 100));
+
     try {
-      // 使用两种方式选择文件，先尝试使用系统原生选择器，如果失败则使用file_selector
-      List<XFile> selectedFiles = [];
-      bool useNativeSelector = false;
+      // // 关闭"正在获取音频"对话框
+      // if (mounted) {
+      //   Navigator.of(context).pop();
+      // }
       
-      // 尝试使用原生选择器（限制选择100个文件）
-      try {
-        const MethodChannel _channel = MethodChannel('aibeto.maple.audiotags/filepath');
-        final result = await _channel.invokeMethod('selectMultipleAudioFiles', {
-          'maxFiles': 100,
-        });
-        
-        if (result != null && result is List) {
-          selectedFiles = result.map((item) => XFile(item['path'])).toList();
-          useNativeSelector = true;
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          print('使用原生选择器失败: $e');
-        }
-        // 继续使用file_selector
-      }
-      
-      // 如果原生选择器不可用，则使用file_selector
-      if (!useNativeSelector) {
-        // 使用file_selector选择音频文件（支持多选，但限制数量）
-        const XTypeGroup typeGroup = XTypeGroup(
-          label: 'audio',
-          extensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'],
-        );
-        
-        selectedFiles = await openFiles(
-          acceptedTypeGroups: [typeGroup],
-          confirmButtonText: '选择音频文件',
-        );
-      }
+      // 使用file_picker选择音频文件（支持多选）
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'],
+        allowMultiple: true,
+      );
       
       // 检查用户是否选择了文件
-      if (selectedFiles.isEmpty) {
+      if (result == null || result.files.isEmpty) {
         // 用户取消了选择
+        // 关闭"正在获取音频"对话框
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+        
+        // Toastrr显示提示信息
+        Fluttertoast.showToast(
+          msg: '未选择任何文件',
+
+        );
+        
+
         return;
       }
       
       // 限制最多处理100个文件，避免内存问题
-      if (selectedFiles.length > 100) {
+      if (result.files.length > 100) {
         if (mounted) {
           showDialog(
             context: context,
             builder: (BuildContext context) {
               return AlertDialog(
                 title: const Text('文件数量过多'),
-                content: Text('您选择了 ${selectedFiles.length} 个文件，超过最大限制 100 个文件。\n请减少选择的文件数量。'),
+                content: Text('您选择了 ${result.files.length} 个文件，超过最大限制 100 个文件。\n请减少选择的文件数量。'),
                 actions: [
                   TextButton(
                     onPressed: () {
@@ -338,6 +346,9 @@ class _MyHomePageState extends State<MyHomePage> {
         return;
       }
       
+      // 转换为PlatformFile列表
+      List<PlatformFile> selectedFiles = result.files.toList();
+      
       // 根据选择的文件数量决定进入哪种编辑模式
       if (selectedFiles.length == 1) {
         // 单个文件，进入正常编辑模式
@@ -347,6 +358,17 @@ class _MyHomePageState extends State<MyHomePage> {
         await _processMultipleFilesInSingleView(selectedFiles);
       }
     } catch (e) {
+      // 关闭"正在获取音频"对话框
+      if (mounted) {
+        Navigator.of(context).pop();
+
+      }
+      
+      // 关闭"正在获取音频"对话框
+      // if (mounted) {
+      //   Navigator.of(context).pop();
+      // }
+
       // 关闭可能仍在显示的进度对话框
       if (mounted) {
         Navigator.of(context).pop();
@@ -380,10 +402,10 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   // 处理单个文件（正常编辑模式）
-  Future<void> _processSingleFile(XFile selectedFile) async {
-    final String fileName = path.basename(selectedFile.path);
+  Future<void> _processSingleFile(PlatformFile selectedFile) async {
+    final String fileName = path.basename(selectedFile.path!);
     // 记录原始文件路径
-    final String originalFilePath = selectedFile.path;
+    final String originalFilePath = selectedFile.path!;
     
     if (kDebugMode) {
       print('KDEBUG: 用户选择的文件路径: $originalFilePath');
@@ -426,7 +448,13 @@ class _MyHomePageState extends State<MyHomePage> {
       if (mounted) {
         Navigator.of(context).pop();
       }
-      
+
+      // 关闭"正在获取音频"对话框
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+
       // 如果成功读取标签，则导航到标签编辑界面
       // 直接使用原始文件路径
       if (tags != null && mounted) {
@@ -494,11 +522,18 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   // 处理多个文件（在单一视图中显示）
-  Future<void> _processMultipleFilesInSingleView(List<XFile> selectedFiles) async {
+  Future<void> _processMultipleFilesInSingleView(List<PlatformFile> selectedFiles) async {
     if (kDebugMode) {
       print('KDEBUG: 处理多个文件 (${selectedFiles.length} 个)');
     }
     
+    // 关闭"正在获取音频"对话框
+    if (mounted) {
+      Navigator.of(context).pop();
+
+    }
+
+
     // 显示进度对话框
     if (mounted) {
       showDialog(
@@ -530,17 +565,17 @@ class _MyHomePageState extends State<MyHomePage> {
       // 收集所有文件路径
       for (int i = 0; i < selectedFiles.length; i++) {
         final selectedFile = selectedFiles[i];
-        final String fileName = path.basename(selectedFile.path);
+        final String fileName = path.basename(selectedFile.path!);
         // 记录第一个文件的原始路径
         if (i == 0) {
-          firstOriginalFilePath = selectedFile.path;
+          firstOriginalFilePath = selectedFile.path!;
         }
         
         if (kDebugMode) {
           print('KDEBUG: 处理第 ${i+1}/${selectedFiles.length} 个文件: $fileName');
         }
         
-        filePaths.add(selectedFile.path);
+        filePaths.add(selectedFile.path!);
       }
       
       // 读取第一个文件的标签作为初始显示
@@ -659,8 +694,8 @@ class _MyHomePageState extends State<MyHomePage> {
             Positioned.fill(
               child: Container(
                 color: Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.black.withOpacity(0.2) 
-                  : Colors.white.withOpacity(0.2),
+                  ? Colors.black.withValues(alpha: 0.2) 
+                  : Colors.white.withValues(alpha: 0.2),
               ),
             ),
           // 页面内容

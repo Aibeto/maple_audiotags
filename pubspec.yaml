@@ -41,7 +41,7 @@ dependencies:
   fluttertoast: ^8.2.8
   permission_handler: ^11.3.1
   intl: ^0.20.2
-  file_selector: ^1.0.3
+  file_picker: ^8.1.0
   exif: ^3.3.0
   flutter_exif_rotation: ^0.5.2
   image: ^4.5.4
