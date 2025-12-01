@@ -21,7 +21,7 @@ import 'package:crypto/crypto.dart'; // 添加用于计算MD5哈希值
 
 
 // 上间距
-const kMarginTop = 16.0;
+
 
 
 /// 音频标签编辑UI组件
@@ -1615,6 +1615,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               SizedBox(height: MediaQuery.of(context).padding.top),
               // 添加一个占位符，用于使内容层与状态栏之间的间距保持一致
               const SizedBox(height: 30),
+              const SizedBox(height: 16),
               // 封面图片显示区域
               // 检查是否有封面图片数据，如果有则显示图片，否则显示添加图片的占位符
               if (_currentCoverImage != null)
@@ -1898,6 +1899,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 child: _buildGlassLyricsFormField(),
               ),
               const SizedBox(height: 24),
+              // const SizedBox(height: 16),
               // Center(
               //   child: ElevatedButton.icon(
               //     onPressed: _saveTags,
@@ -1911,9 +1913,10 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       ),
     ),
   ),
+  // const SizedBox(height: 16),
           // 左上角返回按钮 (移到最后确保在最顶层)
           Positioned(
-            top: MediaQuery.of(context).padding.top + 0.0, // 更靠近顶部
+            top: MediaQuery.of(context).padding.top + 16, // 更靠近顶部
             left: 12.0,
             child: LiquidGlassLayer(
               settings: LiquidGlassSettings(
@@ -1949,7 +1952,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           ),
           // 右上角操作按钮组
           Positioned(
-            top: MediaQuery.of(context).padding.top + 0.0, // 更靠近顶部
+            top: MediaQuery.of(context).padding.top + 16, // 更靠近顶部
             right: 12.0,
             child: Row(
               mainAxisSize: MainAxisSize.min,
