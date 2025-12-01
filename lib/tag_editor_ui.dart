@@ -1626,7 +1626,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                       child: GestureDetector(
                         onTap: _selectNewCoverImage,
                         child: Container(
-                          width: MediaQuery.of(context).size.width * 0.75,
+                          width: MediaQuery.of(context).size.width * 0.5,
                           constraints: const BoxConstraints(maxWidth: 400),
                           child: Stack(
                             children: [
@@ -1685,7 +1685,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                   child: GestureDetector(
                     onTap: _selectNewCoverImage,
                     child: Container(
-                      width: MediaQuery.of(context).size.width * 0.75,
+                      width: MediaQuery.of(context).size.width * 0.5,
                       constraints: const BoxConstraints(maxWidth: 400),
                       child: Stack(
                         children: [
