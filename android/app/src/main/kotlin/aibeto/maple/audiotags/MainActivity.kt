@@ -2,12 +2,17 @@ package aibeto.maple.audiotags
 
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.content.Intent
+import android.database.Cursor
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.MethodCall
+import io.flutter.plugin.common.MethodResult
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "aibeto.maple.audiotags/filepath"
+    private var pendingResult: MethodResult? = null
     
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -23,7 +28,73 @@ class MainActivity : FlutterActivity() {
                         result.error("NULL_URI", "URI is null", null)
                     }
                 }
+                "selectMultipleAudioFiles" -> {
+                    val maxFiles = call.argument<Int>("maxFiles") ?: 100
+                    selectMultipleAudioFiles(maxFiles, result)
+                }
                 else -> result.notImplemented()
+            }
+        }
+    }
+    
+    private fun selectMultipleAudioFiles(maxFiles: Int, result: MethodResult) {
+        pendingResult = result
+        
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*" // 允许所有类型，后续会过滤音频文件
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(
+                "audio/mpeg", "audio/wav", "audio/flac", "audio/aac", "audio/ogg", "audio/mp4"
+            ))
+        }
+        
+        startActivityForResult(intent, 42)
+    }
+    
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        
+        if (requestCode == 42 && pendingResult != null) {
+            try {
+                val result = pendingResult!!
+                pendingResult = null
+                
+                if (resultCode == RESULT_OK && data != null) {
+                    val files = mutableListOf<Map<String, String>>()
+                    
+                    // 处理单个或多个文件
+                    val clipData = data.clipData
+                    if (clipData != null) {
+                        // 多个文件
+                        for (i in 0 until clipData.itemCount) {
+                            if (files.size >= 100) break // 限制文件数量
+                            
+                            val uri = clipData.getItemAt(i).uri
+                            val realPath = getRealPathFromURI(uri)
+                            if (realPath != null) {
+                                files.add(mapOf("path" to realPath))
+                            }
+                        }
+                    } else {
+                        // 单个文件
+                        val uri = data.data
+                        if (uri != null) {
+                            val realPath = getRealPathFromURI(uri)
+                            if (realPath != null) {
+                                files.add(mapOf("path" to realPath))
+                            }
+                        }
+                    }
+                    
+                    result.success(files)
+                } else {
+                    result.success(null)
+                }
+            } catch (e: Exception) {
+                val result = pendingResult!!
+                pendingResult = null
+                result.error("ERROR", e.message, null)
             }
         }
     }
@@ -32,32 +103,35 @@ class MainActivity : FlutterActivity() {
         when {
             DocumentsContract.isDocumentUri(this, uri) -> {
                 val docId = DocumentsContract.getDocumentId(uri)
+                val split = docId.split(":").toTypedArray()
                 
-                when {
-                    uri.authority == "com.android.externalstorage.documents" -> {
-                        val split = docId.split(":").toTypedArray()
+                when (uri.authority) {
+                    "com.android.externalstorage.documents" -> {
+                        // ExternalStorageProvider
                         val type = split[0]
                         if ("primary".equals(type, ignoreCase = true)) {
-                            return context.getExternalFilesDir(null)?.absolutePath?.replace("/Android/data/${context.packageName}/files", "") + "/" + split[1]
+                            return "/storage/emulated/0/${split[1]}"
                         }
                     }
-                    // uri.authority == "com.android.providers.downloads.documents" -> {
-                    //     val contentUri = android.net.Uri.parse("content://downloads/public_downloads")
-                    //     return getDataColumn(contentUri, docId.toLong().toString())
-                    // }
-                    // uri.authority == "com.android.providers.media.documents" -> {
-                    //     val split = docId.split(":").toTypedArray()
-                    //     val type = split[0]
-                    //     var contentUri: Uri? = null
-                    //     when (type) {
-                    //         "image" -> contentUri = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                    //         "video" -> contentUri = android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-                    //         "audio" -> contentUri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-                    //     }
-                    //     val selection = "_id=?"
-                    //     // val selectionArgs = arrayOf(split[1])
-                    //     return getDataColumn(contentUri, selection, selectionArgs)
-                    // }
+                    "com.android.providers.downloads.documents" -> {
+                        // DownloadsProvider
+                        val id = split[1]
+                        val contentUri = android.net.Uri.parse("content://downloads/public_downloads")
+                        return getDataColumn(contentUri, "_id=?", arrayOf(id))
+                    }
+                    "com.android.providers.media.documents" -> {
+                        // MediaProvider
+                        // val type = split[0]
+                        // var contentUri: Uri? = null
+                        // when (type) {
+                        //     "image" -> contentUri = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                        //     "video" -> contentUri = android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                        //     "audio" -> contentUri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                        // }
+                        // val selection = "_id=?"
+                        // // val selectionArgs = arrayOf(split[1])
+                        // return getDataColumn(contentUri, selection, selectionArgs)
+                    }
                 }
             }
             "content".equals(uri.scheme, ignoreCase = true) -> {
@@ -71,7 +145,7 @@ class MainActivity : FlutterActivity() {
     }
     
     private fun getDataColumn(uri: Uri?, selection: String?, selectionArgs: Array<String>?): String? {
-        var cursor: android.database.Cursor? = null
+        var cursor: Cursor? = null
         val column = "_data"
         val projection = arrayOf(column)
         
@@ -82,13 +156,10 @@ class MainActivity : FlutterActivity() {
                 return cursor.getString(columnIndex)
             }
         } catch (e: Exception) {
-            // Handle exception
+            // 忽略异常，返回null
         } finally {
             cursor?.close()
         }
         return null
     }
-    
-    // private val context: android.content.Context
-    //     get() = this
 }

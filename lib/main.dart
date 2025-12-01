@@ -37,7 +37,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 // 导入网络图片加载库
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, MethodChannel;
 import 'package:http/http.dart' as http;
 
 // 程序入口点，使用async关键字支持异步操作
@@ -272,20 +272,69 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     try {
-      // 使用file_selector选择音频文件（支持多选）
-      const XTypeGroup typeGroup = XTypeGroup(
-        label: 'audio',
-        extensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'],
-      );
+      // 使用两种方式选择文件，先尝试使用系统原生选择器，如果失败则使用file_selector
+      List<XFile> selectedFiles = [];
+      bool useNativeSelector = false;
       
-      final List<XFile> selectedFiles = await openFiles(
-        acceptedTypeGroups: [typeGroup],
-        confirmButtonText: '选择音频文件',
-      );
+      // 尝试使用原生选择器（限制选择100个文件）
+      try {
+        const MethodChannel _channel = MethodChannel('aibeto.maple.audiotags/filepath');
+        final result = await _channel.invokeMethod('selectMultipleAudioFiles', {
+          'maxFiles': 100,
+        });
+        
+        if (result != null && result is List) {
+          selectedFiles = result.map((item) => XFile(item['path'])).toList();
+          useNativeSelector = true;
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('使用原生选择器失败: $e');
+        }
+        // 继续使用file_selector
+      }
+      
+      // 如果原生选择器不可用，则使用file_selector
+      if (!useNativeSelector) {
+        // 使用file_selector选择音频文件（支持多选，但限制数量）
+        const XTypeGroup typeGroup = XTypeGroup(
+          label: 'audio',
+          extensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'],
+        );
+        
+        selectedFiles = await openFiles(
+          acceptedTypeGroups: [typeGroup],
+          confirmButtonText: '选择音频文件',
+        );
+      }
       
       // 检查用户是否选择了文件
       if (selectedFiles.isEmpty) {
         // 用户取消了选择
+        return;
+      }
+      
+      // 限制最多处理100个文件，避免内存问题
+      if (selectedFiles.length > 100) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('文件数量过多'),
+                content: Text('您选择了 ${selectedFiles.length} 个文件，超过最大限制 100 个文件。\n请减少选择的文件数量。'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('确定'),
+                  ),
+                ],
+              );
+            },
+          );
+        }
         return;
       }
       
@@ -363,35 +412,14 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     
     try {
-      // 获取应用缓存目录
-      Directory cacheDir = await getTemporaryDirectory();
-      // 获取当前日期作为文件夹名称
-      String dateFolder = DateFormat('yyyyMMdd').format(DateTime.now());
-      // 构建带日期的缓存目录路径
-      String datedCacheDirPath = path.join(cacheDir.path, 'audio_cache', dateFolder);
-      // 创建带日期的缓存目录
-      Directory datedCacheDir = Directory(datedCacheDirPath);
-      if (!await datedCacheDir.exists()) {
-        await datedCacheDir.create(recursive: true);
-      }
+      // 确保UI有时间渲染进度对话框
+      await Future.delayed(const Duration(milliseconds: 100));
       
-      // 构建原始文件的目标路径（加上"_original"后缀）
-      String originalFileName = '${path.basenameWithoutExtension(fileName)}_original${path.extension(fileName)}';
-      String targetPath = path.join(datedCacheDirPath, originalFileName);
+      // 直接读取原始文件的标签，不复制到缓存
+      final tags = await readAudioTags(originalFilePath);
       
       if (kDebugMode) {
-        print('KDEBUG: 原始文件路径: $originalFilePath');
-        print('KDEBUG: 缓存目录: $datedCacheDirPath');
-        print('KDEBUG: 缓存中的原始文件路径: $targetPath');
-      }
-      
-      // 将选中的文件复制到缓存目录，覆盖已存在的同名文件
-      await selectedFile.saveTo(targetPath);
-      
-      if (kDebugMode) {
-        print('KDEBUG: 原始文件已成功复制到缓存');
-        print('KDEBUG: 缓存中的原始文件是否存在: ${await File(targetPath).exists()}');
-        print('KDEBUG: 缓存中的原始文件大小: ${await File(targetPath).length()} 字节');
+        print('读取到的标签: $tags');
       }
       
       // 关闭进度对话框
@@ -399,34 +427,27 @@ class _MyHomePageState extends State<MyHomePage> {
         Navigator.of(context).pop();
       }
       
-      // 调用edit.dart中的函数读取音频标签
-      final tags = await readAudioTags(targetPath);
-      
-      if (kDebugMode) {
-        print('读取到的标签: $tags');
-      }
-      
       // 如果成功读取标签，则导航到标签编辑界面
-      // 传递缓存中的原始文件路径和真实的文件路径
+      // 直接使用原始文件路径
       if (tags != null && mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => TagEditorUI(
               tag: tags, 
-              filePath: targetPath, // 使用缓存中的原始文件路径
+              filePath: originalFilePath, // 直接使用原始文件路径
               realFilePath: originalFilePath, // 传递真实的原始文件路径
             ),
           ),
         );
       } else if (mounted) {
-        // 显示对话框通知用户文件已复制但未能读取标签信息
+        // 显示对话框通知用户未能读取标签信息
         showDialog(
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
               title: const Text('读取失败'),
-              content: const Text('文件已复制到缓存，但未能读取标签信息'),
+              content: const Text('未能读取文件标签信息'),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -445,7 +466,30 @@ class _MyHomePageState extends State<MyHomePage> {
         Navigator.of(context).pop();
       }
       
-      rethrow;
+      if (kDebugMode) {
+        print('选择或处理文件时出错: $e');
+      }
+      
+      // 显示错误消息给用户
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('处理文件出错'),
+              content: Text('处理文件时出错: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
+        );
+      }
     }
   }
 
@@ -477,22 +521,13 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     
     try {
-      // 获取应用缓存目录
-      Directory cacheDir = await getTemporaryDirectory();
-      // 获取当前日期作为文件夹名称
-      String dateFolder = DateFormat('yyyyMMdd').format(DateTime.now());
-      // 构建带日期的缓存目录路径
-      String datedCacheDirPath = path.join(cacheDir.path, 'audio_cache', dateFolder);
-      // 创建带日期的缓存目录
-      Directory datedCacheDir = Directory(datedCacheDirPath);
-      if (!await datedCacheDir.exists()) {
-        await datedCacheDir.create(recursive: true);
-      }
+      // 确保UI有时间渲染进度对话框
+      await Future.delayed(const Duration(milliseconds: 100));
       
-      List<String> cachedFilePaths = [];
+      List<String> filePaths = [];
       String? firstOriginalFilePath;
       
-      // 处理每个选定的文件
+      // 收集所有文件路径
       for (int i = 0; i < selectedFiles.length; i++) {
         final selectedFile = selectedFiles[i];
         final String fileName = path.basename(selectedFile.path);
@@ -505,25 +540,14 @@ class _MyHomePageState extends State<MyHomePage> {
           print('KDEBUG: 处理第 ${i+1}/${selectedFiles.length} 个文件: $fileName');
         }
         
-        // 构建原始文件的目标路径（加上"_original"后缀）
-        String originalFileName = '${path.basenameWithoutExtension(fileName)}_original${path.extension(fileName)}';
-        String targetPath = path.join(datedCacheDirPath, originalFileName);
-        
-        if (kDebugMode) {
-          print('KDEBUG: 原始文件路径: ${selectedFile.path}');
-          print('KDEBUG: 缓存目录: $datedCacheDirPath');
-          print('KDEBUG: 缓存中的原始文件路径: $targetPath');
-        }
-        
-        // 将选中的文件复制到缓存目录，覆盖已存在的同名文件
-        await selectedFile.saveTo(targetPath);
-        cachedFilePaths.add(targetPath);
-        
-        if (kDebugMode) {
-          print('KDEBUG: 原始文件已成功复制到缓存');
-          print('KDEBUG: 缓存中的原始文件是否存在: ${await File(targetPath).exists()}');
-          print('KDEBUG: 缓存中的原始文件大小: ${await File(targetPath).length()} 字节');
-        }
+        filePaths.add(selectedFile.path);
+      }
+      
+      // 读取第一个文件的标签作为初始显示
+      final tags = await readAudioTags(filePaths[0]);
+      
+      if (kDebugMode) {
+        print('读取到的第一个文件的标签: $tags');
       }
       
       // 关闭进度对话框
@@ -531,38 +555,31 @@ class _MyHomePageState extends State<MyHomePage> {
         Navigator.of(context).pop();
       }
       
-      // 读取第一个文件的标签作为初始显示
-      final tags = await readAudioTags(cachedFilePaths[0]);
-      
-      if (kDebugMode) {
-        print('读取到的第一个文件的标签: $tags');
-      }
-      
       // 如果成功读取标签，则导航到标签编辑界面
-      // 传递第一个缓存中的原始文件路径、真实的文件路径和附加文件列表
+      // 直接使用原始文件路径
       if (tags != null && mounted) {
-        // 从缓存文件路径列表中移除第一个，因为它已经是主文件
-        List<String> additionalFiles = cachedFilePaths.sublist(1);
+        // 从文件路径列表中移除第一个，因为它已经是主文件
+        List<String> additionalFiles = filePaths.sublist(1);
         
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => TagEditorUI(
               tag: tags, 
-              filePath: cachedFilePaths[0], // 使用第一个缓存中的原始文件路径
+              filePath: filePaths[0], // 直接使用第一个原始文件路径
               realFilePath: firstOriginalFilePath, // 传递真实的原始文件路径
               additionalFiles: additionalFiles, // 传递额外的文件列表
             ),
           ),
         );
       } else if (mounted) {
-        // 显示对话框通知用户文件已复制但未能读取标签信息
+        // 显示对话框通知用户未能读取标签信息
         showDialog(
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
               title: const Text('读取失败'),
-              content: const Text('文件已复制到缓存，但未能读取标签信息'),
+              content: const Text('未能读取文件标签信息'),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -581,7 +598,30 @@ class _MyHomePageState extends State<MyHomePage> {
         Navigator.of(context).pop();
       }
       
-      rethrow;
+      if (kDebugMode) {
+        print('选择或处理文件时出错: $e');
+      }
+      
+      // 显示错误消息给用户
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('处理文件出错'),
+              content: Text('处理文件时出错: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
+        );
+      }
     }
   }
 
