@@ -1733,6 +1733,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                               ),
                             ),
                           ),
+                          const SizedBox(height: 16),
                         ],
                       ),
                     ),
