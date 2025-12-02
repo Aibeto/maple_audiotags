@@ -1730,8 +1730,10 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                                   Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
                                   Text('点击添加封面图片', style: TextStyle(color: Colors.grey)),
                                 ],
+                                // const SizedBox(height: 16),
                               ),
                             ),
+                          
                           ),
                           const SizedBox(height: 16),
                         ],
