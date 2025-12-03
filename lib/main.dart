@@ -824,47 +824,47 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // 批量编辑功能按钮（保留但与上面的按钮功能一样）
-                LiquidGlassLayer(
-                  settings: LiquidGlassSettings(
-                    thickness: 12,
-                    blur: 1.5,
-                    lightAngle: 0.3 * pi,
-                    lightIntensity: 1.2,
-                    ambientStrength: 0.4,
-                    blend: 0.7,
-                    refractiveIndex: 1.6,
-                    chromaticAberration: 0.4,
-                    saturation: 1.2,
-                  ),
-                  child: LiquidGlass.inLayer(
-                    shape: LiquidRoundedRectangle(
-                      borderRadius: const Radius.circular(20.0),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _selectMusicFile, // 修改为使用相同的文件选择方法
-                          borderRadius: BorderRadius.circular(20.0),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.menu),
-                              SizedBox(width: 6),
-                              Text('批量编辑'),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                // const SizedBox(width: 8),
+                // // 批量编辑功能按钮（保留但与上面的按钮功能一样）
+                // LiquidGlassLayer(
+                //   settings: LiquidGlassSettings(
+                //     thickness: 12,
+                //     blur: 1.5,
+                //     lightAngle: 0.3 * pi,
+                //     lightIntensity: 1.2,
+                //     ambientStrength: 0.4,
+                //     blend: 0.7,
+                //     refractiveIndex: 1.6,
+                //     chromaticAberration: 0.4,
+                //     saturation: 1.2,
+                //   ),
+                //   child: LiquidGlass.inLayer(
+                //     shape: LiquidRoundedRectangle(
+                //       borderRadius: const Radius.circular(20.0),
+                //     ),
+                //     child: Container(
+                //       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                //       decoration: BoxDecoration(
+                //         borderRadius: BorderRadius.circular(20.0),
+                //       ),
+                //       child: Material(
+                //         color: Colors.transparent,
+                //         child: InkWell(
+                //           onTap: _selectMusicFile, // 修改为使用相同的文件选择方法
+                //           borderRadius: BorderRadius.circular(20.0),
+                //           child: const Row(
+                //             mainAxisSize: MainAxisSize.min,
+                //             children: [
+                //               Icon(Icons.menu),
+                //               SizedBox(width: 6),
+                //               Text('批量编辑'),
+                //             ],
+                //           ),
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ),
