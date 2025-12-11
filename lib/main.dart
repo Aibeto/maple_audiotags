@@ -777,15 +777,15 @@ class _HomePageState extends State<HomePage> {
                 // 主题切换按钮
                 LiquidGlassLayer(
                   settings: LiquidGlassSettings(
-                    thickness: 12,
-                    blur: 1.5,
+                    thickness: 6,
+                    blur: 0.8,
                     lightAngle: 0.3 * pi,
-                    lightIntensity: 1.2,
-                    ambientStrength: 0.4,
-                    blend: 0.7,
-                    refractiveIndex: 1.6,
-                    chromaticAberration: 0.4,
-                    saturation: 1.2,
+                    lightIntensity: 0.6,
+                    ambientStrength: 0.2,
+                    blend: 0.3,
+                    refractiveIndex: 1.3,
+                    chromaticAberration: 0.2,
+                    saturation: 1.1,
                   ),
                   child: LiquidGlass.inLayer(
                     shape: LiquidRoundedRectangle(
@@ -826,52 +826,52 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(width: 16),
                 // 设置按钮
-                LiquidGlassLayer(
-                  settings: LiquidGlassSettings(
-                    thickness: 12,
-                    blur: 1.5,
-                    lightAngle: 0.3 * pi,
-                    lightIntensity: 1.2,
-                    ambientStrength: 0.4,
-                    blend: 0.7,
-                    refractiveIndex: 1.6,
-                    chromaticAberration: 0.4,
-                    saturation: 1.2,
-                  ),
-                  child: LiquidGlass.inLayer(
-                    shape: LiquidRoundedRectangle(
-                      borderRadius: const Radius.circular(20.0),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SettingsPage(),
-                              ),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(20.0),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.settings),
-                              SizedBox(width: 6),
-                              Text('设置'),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                // LiquidGlassLayer(
+                //   settings: LiquidGlassSettings(
+                //     thickness: 6,
+                //     blur: 0.8,
+                //     lightAngle: 0.3 * pi,
+                //     lightIntensity: 0.6,
+                //     ambientStrength: 0.2,
+                //     blend: 0.3,
+                //     refractiveIndex: 1.3,
+                //     chromaticAberration: 0.2,
+                //     saturation: 1.1,
+                //   ),
+                //   child: LiquidGlass.inLayer(
+                //     shape: LiquidRoundedRectangle(
+                //       borderRadius: const Radius.circular(20.0),
+                //     ),
+                //     child: Container(
+                //       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                //       decoration: BoxDecoration(
+                //         borderRadius: BorderRadius.circular(20.0),
+                //       ),
+                //       child: Material(
+                //         color: Colors.transparent,
+                //         child: InkWell(
+                //           onTap: () {
+                //             Navigator.push(
+                //               context,
+                //               MaterialPageRoute(
+                //                 builder: (context) => const SettingsPage(),
+                //               ),
+                //             );
+                //           },
+                //           borderRadius: BorderRadius.circular(20.0),
+                //           child: const Row(
+                //             mainAxisSize: MainAxisSize.min,
+                //             children: [
+                //               Icon(Icons.settings),
+                //               SizedBox(width: 6),
+                //               Text('设置'),
+                //             ],
+                //           ),
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
                 const SizedBox(width: 8),
               ],
             ),

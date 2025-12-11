@@ -130,15 +130,15 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           Positioned.fill(
             child: LiquidGlassLayer(
               settings: LiquidGlassSettings(
-                thickness: 6,
-                blur: 0.5,
+                thickness: 3, // 从6降低到3，减少渲染压力
+                blur: 0.3, // 从0.5降低到0.3，减少模糊计算
                 lightAngle: 0.3 * pi,
-                lightIntensity: 0.7,
-                ambientStrength: 0.2,
-                blend: 0.5,
-                refractiveIndex: 1.2,
-                chromaticAberration: 0.2,
-                saturation: 1.05,
+                lightIntensity: 0.5, // 从0.7降低到0.5，减少光照计算
+                ambientStrength: 0.1, // 从0.2降低到0.1，减少环境光计算
+                blend: 0.3, // 从0.5降低到0.3，减少混合计算
+                refractiveIndex: 1.1, // 从1.2降低到1.1，减少折射计算
+                chromaticAberration: 0.1, // 从0.2降低到0.1，减少色差计算
+                saturation: 1.02, // 从1.05降低到1.02，减少饱和度计算
               ),
               child: LiquidGlass.inLayer(
                 shape: LiquidRoundedRectangle(
@@ -1527,15 +1527,15 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 Positioned.fill(
                   child: LiquidGlassLayer(
                     settings: LiquidGlassSettings(
-                      thickness: 6,
-                      blur: 0.5,
+                      thickness: 3,
+                      blur: 0.3,
                       lightAngle: 0.3 * pi,
-                      lightIntensity: 0.7,
-                      ambientStrength: 0.2,
-                      blend: 0.5,
-                      refractiveIndex: 1.2,
-                      chromaticAberration: 0.2,
-                      saturation: 1.05,
+                      lightIntensity: 0.5,
+                      ambientStrength: 0.1,
+                      blend: 0.3,
+                      refractiveIndex: 1.1,
+                      chromaticAberration: 0.1,
+                      saturation: 1.02,
                     ),
                     child: LiquidGlass.inLayer(
                       shape: LiquidRoundedRectangle(
@@ -1970,15 +1970,15 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             left: 12.0,
             child: LiquidGlassLayer(
               settings: LiquidGlassSettings(
-                thickness: 12, // 玻璃厚度，适中值提供明显的折射效果
-                blur: 1.5, // 模糊度，适度增加以增强玻璃质感
-                lightAngle: 0.3 * pi, // 光源角度，控制高光位置
-                lightIntensity: 1.2, // 光源强度，增强高光效果使玻璃更亮眼
-                ambientStrength: 0.4, // 环境光强度，适度增加环境光以增强立体感
-                blend: 0.7, // 形状融合度，控制多个形状间的混合效果
-                refractiveIndex: 1.6, // 折射率，增加折射效果使玻璃更真实
-                chromaticAberration: 0.4, // 色彩分离度，轻微色散增强光学效果
-                saturation: 1.2, // 饱和度，增强色彩鲜艳度
+                thickness: 6, // 降低玻璃厚度减少渲染压力
+                blur: 0.8, // 降低模糊度减少渲染压力
+                lightAngle: 0.3 * pi,
+                lightIntensity: 0.6, // 降低光源强度减少渲染压力
+                ambientStrength: 0.2, // 降低环境光强度减少渲染压力
+                blend: 0.3, // 降低形状融合度减少渲染压力
+                refractiveIndex: 1.3, // 降低折射率减少渲染压力
+                chromaticAberration: 0.2, // 降低色彩分离度减少渲染压力
+                saturation: 1.1 // 降低饱和度减少渲染压力
               ),
               child: LiquidGlass.inLayer(
                 shape: LiquidRoundedRectangle(
