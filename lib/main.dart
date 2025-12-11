@@ -9,7 +9,6 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // 导入Dart IO库，用于文件操作
 import 'dart:io';
-import 'dart:math';
 // 导入路径处理库
 // ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as path;
@@ -21,7 +20,6 @@ import 'edit.dart';
 // 导入标签编辑UI
 import 'tag_editor_ui.dart';
 // 导入设置页面
-import 'settings_page.dart';
 
 // 导入日期格式化库
 
@@ -31,6 +29,7 @@ import 'package:permission_handler/permission_handler.dart';
 // 导入文件选择器
 import 'package:file_picker/file_picker.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'config/glass_effect_config.dart';
 
 // 导入网络图片加载库
 import 'package:http/http.dart' as http;
@@ -725,17 +724,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 40),
                 // 选择文件按钮
                 LiquidGlassLayer(
-                  settings: LiquidGlassSettings(
-                    thickness: 12,
-                    blur: 1.5,
-                    lightAngle: 0.3 * pi,
-                    lightIntensity: 1.2,
-                    ambientStrength: 0.4,
-                    blend: 0.7,
-                    refractiveIndex: 1.6,
-                    chromaticAberration: 0.4,
-                    saturation: 1.2,
-                  ),
+                  settings: GlassEffectConfig.fileSelectorSettings(),
                   child: LiquidGlass.inLayer(
                     shape: LiquidRoundedRectangle(
                       borderRadius: const Radius.circular(28.0),
@@ -776,17 +765,7 @@ class _HomePageState extends State<HomePage> {
                 
                 // 主题切换按钮
                 LiquidGlassLayer(
-                  settings: LiquidGlassSettings(
-                    thickness: 6,
-                    blur: 0.8,
-                    lightAngle: 0.3 * pi,
-                    lightIntensity: 0.6,
-                    ambientStrength: 0.2,
-                    blend: 0.3,
-                    refractiveIndex: 1.3,
-                    chromaticAberration: 0.2,
-                    saturation: 1.1,
-                  ),
+                  settings: GlassEffectConfig.smallButtonSettings(level: EffectLevel.medium),
                   child: LiquidGlass.inLayer(
                     shape: LiquidRoundedRectangle(
                       borderRadius: const Radius.circular(20.0),

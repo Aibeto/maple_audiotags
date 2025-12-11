@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'config/glass_effect_config.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:crypto/crypto.dart'; // 添加用于计算MD5哈希值
@@ -55,6 +56,9 @@ class TagEditorUI extends StatefulWidget {
 }
 
 class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin {
+  // 添加效果等级参数
+  final EffectLevel effectLevel = EffectLevel.medium;
+
   /// 控制器用于编辑标题
   late TextEditingController _titleController;
 
@@ -129,17 +133,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           // 液态玻璃背景效果
           Positioned.fill(
             child: LiquidGlassLayer(
-              settings: LiquidGlassSettings(
-                thickness: 3, // 从6降低到3，减少渲染压力
-                blur: 0.3, // 从0.5降低到0.3，减少模糊计算
-                lightAngle: 0.3 * pi,
-                lightIntensity: 0.5, // 从0.7降低到0.5，减少光照计算
-                ambientStrength: 0.1, // 从0.2降低到0.1，减少环境光计算
-                blend: 0.3, // 从0.5降低到0.3，减少混合计算
-                refractiveIndex: 1.1, // 从1.2降低到1.1，减少折射计算
-                chromaticAberration: 0.1, // 从0.2降低到0.1，减少色差计算
-                saturation: 1.02, // 从1.05降低到1.02，减少饱和度计算
-              ),
+              settings: GlassEffectConfig.baseSettings(level: effectLevel),
               child: LiquidGlass.inLayer(
                 shape: LiquidRoundedRectangle(
                   borderRadius: const Radius.circular(12.0),
@@ -192,17 +186,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           // 液态玻璃背景效果
           Positioned.fill(
             child: LiquidGlassLayer(
-              settings: LiquidGlassSettings(
-                thickness: 6,
-                blur: 0.5,
-                lightAngle: 0.3 * pi,
-                lightIntensity: 0.7,
-                ambientStrength: 0.2,
-                blend: 0.5,
-                refractiveIndex: 1.2,
-                chromaticAberration: 0.2,
-                saturation: 1.05,
-              ),
+              settings: GlassEffectConfig.baseSettings(level: effectLevel),
               child: LiquidGlass.inLayer(
                 shape: LiquidRoundedRectangle(
                   borderRadius: const Radius.circular(12.0),
@@ -411,17 +395,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   }) {
     return Center(
       child: LiquidGlassLayer(
-        settings: LiquidGlassSettings(
-          thickness: 15,
-          blur: 2.0,
-          lightAngle: 0.3 * pi,
-          lightIntensity: 0.7,
-          ambientStrength: 0.5,
-          blend: 0.7,
-          refractiveIndex: 1.5,
-          chromaticAberration: 0.5,
-          saturation: 1.2,
-        ),
+        settings: GlassEffectConfig.dialogSettings(level: effectLevel),
         child: LiquidGlass.inLayer(
           shape: LiquidRoundedRectangle(
             borderRadius: const Radius.circular(20.0),
@@ -1526,17 +1500,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 // 液态玻璃背景效果
                 Positioned.fill(
                   child: LiquidGlassLayer(
-                    settings: LiquidGlassSettings(
-                      thickness: 3,
-                      blur: 0.3,
-                      lightAngle: 0.3 * pi,
-                      lightIntensity: 0.5,
-                      ambientStrength: 0.1,
-                      blend: 0.3,
-                      refractiveIndex: 1.1,
-                      chromaticAberration: 0.1,
-                      saturation: 1.02,
-                    ),
+                    settings: GlassEffectConfig.baseSettings(level: effectLevel),
                     child: LiquidGlass.inLayer(
                       shape: LiquidRoundedRectangle(
                         borderRadius: const Radius.circular(12.0),
@@ -1969,17 +1933,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             top: MediaQuery.of(context).padding.top + 16, // 更靠近顶部
             left: 12.0,
             child: LiquidGlassLayer(
-              settings: LiquidGlassSettings(
-                thickness: 6, // 降低玻璃厚度减少渲染压力
-                blur: 0.8, // 降低模糊度减少渲染压力
-                lightAngle: 0.3 * pi,
-                lightIntensity: 0.6, // 降低光源强度减少渲染压力
-                ambientStrength: 0.2, // 降低环境光强度减少渲染压力
-                blend: 0.3, // 降低形状融合度减少渲染压力
-                refractiveIndex: 1.3, // 降低折射率减少渲染压力
-                chromaticAberration: 0.2, // 降低色彩分离度减少渲染压力
-                saturation: 1.1 // 降低饱和度减少渲染压力
-              ),
+              settings: GlassEffectConfig.smallButtonSettings(),
               child: LiquidGlass.inLayer(
                 shape: LiquidRoundedRectangle(
                   borderRadius: const Radius.circular(20.0),
@@ -2009,17 +1963,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               children: [
                 // 还原更改按钮
                 LiquidGlassLayer(
-                  settings: LiquidGlassSettings(
-                    thickness: 12, // 玻璃厚度，适中值提供明显的折射效果
-                    blur: 1.5, // 模糊度，适度增加以增强玻璃质感
-                    lightAngle: 0.3 * pi, // 光源角度，控制高光位置
-                    lightIntensity: 1.2, // 光源强度，增强高光效果使玻璃更亮眼
-                    ambientStrength: 0.4, // 环境光强度，适度增加环境光以增强立体感
-                    blend: 0.7, // 形状融合度，控制多个形状间的混合效果
-                    refractiveIndex: 1.6, // 折射率，增加折射效果使玻璃更真实
-                    chromaticAberration: 0.4, // 色彩分离度，轻微色散增强光学效果
-                    saturation: 1.2, // 饱和度，增强色彩鲜艳度
-                  ),
+                  settings: GlassEffectConfig.largeButtonSettings(),
                   child: LiquidGlass.inLayer(
                     shape: LiquidRoundedRectangle(
                       borderRadius: const Radius.circular(20.0),
@@ -2057,17 +2001,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 const SizedBox(width: 8),
                 // 保存按钮
                 LiquidGlassLayer(
-                  settings: LiquidGlassSettings(
-                    thickness: 12, // 玻璃厚度，适中值提供明显的折射效果
-                    blur: 1.5, // 模糊度，适度增加以增强玻璃质感
-                    lightAngle: 0.3 * pi, // 光源角度，控制高光位置
-                    lightIntensity: 1.2, // 光源强度，增强高光效果使玻璃更亮眼
-                    ambientStrength: 0.4, // 环境光强度，适度增加环境光以增强立体感
-                    blend: 0.7, // 形状融合度，控制多个形状间的混合效果
-                    refractiveIndex: 1.6, // 折射率，增加折射效果使玻璃更真实
-                    chromaticAberration: 0.4, // 色彩分离度，轻微色散增强光学效果
-                    saturation: 1.2, // 饱和度，增强色彩鲜艳度
-                  ),
+                  settings: GlassEffectConfig.largeButtonSettings(),
                   child: LiquidGlass.inLayer(
                     shape: LiquidRoundedRectangle(
                       borderRadius: const Radius.circular(20.0),
