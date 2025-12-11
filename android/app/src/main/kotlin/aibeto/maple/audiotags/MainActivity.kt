@@ -29,7 +29,7 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 "selectMultipleAudioFiles" -> {
-                    val maxFiles = call.argument<Int>("maxFiles") ?: 100
+                    val maxFiles = call.argument<Int>("maxFiles") ?: 1000
                     // selectMultipleAudioFiles(maxFiles, result)
                 }
                 else -> result.notImplemented()
@@ -68,7 +68,7 @@ class MainActivity : FlutterActivity() {
     //                 if (clipData != null) {
     //                     // 多个文件
     //                     for (i in 0 until clipData.itemCount) {
-    //                         if (files.size >= 100) break // 限制文件数量
+    //                         if (files.size >= 1000) break // 限制文件数量
                             
     //                         val uri = clipData.getItemAt(i).uri
     //                         val realPath = getRealPathFromURI(uri)
