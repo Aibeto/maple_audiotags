@@ -1,10 +1,13 @@
 // 导入Flutter基础Material设计组件库
 // ignore_for_file: use_build_context_synchronously
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 // 导入动态颜色支持库，用于Android 12+的Monet取色功能
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'settings_page.dart';
 // 导入共享偏好设置库，用于持久化存储用户设置
 import 'package:shared_preferences/shared_preferences.dart';
 // 导入Dart IO库，用于文件操作
@@ -190,7 +193,8 @@ class HomePage extends StatefulWidget {
 
 // 音频标签编辑器主页状态管理类，继承自State
 class _HomePageState extends State<HomePage> {
-  // 创建与原生通信的MethodChannel
+  // 效果等级变量
+  int _effectLevel = 1;
   Uint8List? _backgroundImageBytes;
 
   // 异步获取背景图片
@@ -661,9 +665,19 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    // 加载效果等级设置
+    _loadEffectLevel();
     // 在其他初始化完成后异步加载背景图片
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadBackgroundImage();
+    });
+  }
+
+  // 从shared preferences加载效果等级
+  Future<void> _loadEffectLevel() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _effectLevel = prefs.getInt('effectLevel') ?? 1; // 默认值为1
     });
   }
 
@@ -724,7 +738,11 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 40),
                 // 选择文件按钮
                 LiquidGlassLayer(
-                  settings: GlassEffectConfig.fileSelectorSettings(),
+                  settings: GlassEffectConfig.fileSelectorSettings(
+                    level: _effectLevel <= 1 
+                      ? EffectLevel.low 
+                      : (_effectLevel == 2 ? EffectLevel.medium : EffectLevel.high)
+                  ),
                   child: LiquidGlass.inLayer(
                     shape: LiquidRoundedRectangle(
                       borderRadius: const Radius.circular(28.0),
@@ -765,7 +783,11 @@ class _HomePageState extends State<HomePage> {
                 
                 // 主题切换按钮
                 LiquidGlassLayer(
-                  settings: GlassEffectConfig.smallButtonSettings(level: EffectLevel.medium),
+                  settings: GlassEffectConfig.smallButtonSettings(
+                    level: _effectLevel <= 1 
+                      ? EffectLevel.low 
+                      : (_effectLevel == 2 ? EffectLevel.medium : EffectLevel.high)
+                  ),
                   child: LiquidGlass.inLayer(
                     shape: LiquidRoundedRectangle(
                       borderRadius: const Radius.circular(20.0),
@@ -805,52 +827,46 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(width: 16),
                 // 设置按钮
-                // LiquidGlassLayer(
-                //   settings: LiquidGlassSettings(
-                //     thickness: 6,
-                //     blur: 0.8,
-                //     lightAngle: 0.3 * pi,
-                //     lightIntensity: 0.6,
-                //     ambientStrength: 0.2,
-                //     blend: 0.3,
-                //     refractiveIndex: 1.3,
-                //     chromaticAberration: 0.2,
-                //     saturation: 1.1,
-                //   ),
-                //   child: LiquidGlass.inLayer(
-                //     shape: LiquidRoundedRectangle(
-                //       borderRadius: const Radius.circular(20.0),
-                //     ),
-                //     child: Container(
-                //       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                //       decoration: BoxDecoration(
-                //         borderRadius: BorderRadius.circular(20.0),
-                //       ),
-                //       child: Material(
-                //         color: Colors.transparent,
-                //         child: InkWell(
-                //           onTap: () {
-                //             Navigator.push(
-                //               context,
-                //               MaterialPageRoute(
-                //                 builder: (context) => const SettingsPage(),
-                //               ),
-                //             );
-                //           },
-                //           borderRadius: BorderRadius.circular(20.0),
-                //           child: const Row(
-                //             mainAxisSize: MainAxisSize.min,
-                //             children: [
-                //               Icon(Icons.settings),
-                //               SizedBox(width: 6),
-                //               Text('设置'),
-                //             ],
-                //           ),
-                //         ),
-                //       ),
-                //     ),
-                //   ),
-                // ),
+                LiquidGlassLayer(
+                  settings: GlassEffectConfig.smallButtonSettings(
+                    level: _effectLevel <= 1 
+                      ? EffectLevel.low 
+                      : (_effectLevel == 2 ? EffectLevel.medium : EffectLevel.high)
+                  ),
+                  child: LiquidGlass.inLayer(
+                    shape: LiquidRoundedRectangle(
+                      borderRadius: const Radius.circular(20.0),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SettingsPage(),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(20.0),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.settings),
+                              SizedBox(width: 6),
+                              Text('设置'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 8),
               ],
             ),
