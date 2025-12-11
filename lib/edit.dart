@@ -5,6 +5,9 @@ import 'package:audiotags/audiotags.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+// 导入 isolate 工具
+import 'isolate_utils.dart';
+
 /// 读取音频文件的标签信息
 /// 
 /// [filePath] 音频文件的路径
@@ -16,7 +19,7 @@ Future<Tag?> readAudioTags(String filePath) async {
       print('KDEBUG: 文件是否存在: ${await File(filePath).exists()}');
       print('KDEBUG: 文件大小: ${await File(filePath).length()} 字节');
     }
-    final tag = await AudioTags.read(filePath);
+    final tag = await compute(readAudioTagsInBackground, ReadTagsParams(filePath));
     if (kDebugMode) {
       print('成功读取标签: 标题=${tag?.title}, 艺术家=${tag?.trackArtist}');
     }

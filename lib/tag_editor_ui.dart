@@ -14,13 +14,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:intl/intl.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config/glass_effect_config.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:crypto/crypto.dart'; // 添加用于计算MD5哈希值
+
+// 导入 isolate 工具
+import 'isolate_utils.dart';
 
 /// 音频标签编辑UI组件
 /// 提供一个表单界面用于查看和编辑音频文件的标签信息
@@ -612,6 +614,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               Text('正在保存标签信息...'),
             ],
           ),
+          
         );
 
         // 检查是否为批量编辑模式
@@ -646,6 +649,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 child: const Text('确定'),
               ),
             ],
+            
           );
         }
       } catch (e) {
@@ -665,6 +669,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 child: const Text('确定'),
               ),
             ],
+            
           );
           
           if (kDebugMode) {
@@ -778,6 +783,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       _showGlassDialog(
         title: const Text('批量保存'),
         content: Text('正在保存文件...\n已完成: 0/${allFiles.length}'),
+        
       );
     }
     
@@ -795,6 +801,13 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         fileName = fileName.substring(0, fileName.length - 9); // "_original" 长度为9
       }
       
+      // 删除文件名中的时间戳后缀（如 _modified_20251211_221817）
+      if (fileName.contains('_modified_')) {
+        fileName = fileName.substring(0, fileName.lastIndexOf('_modified_'));
+      } else if (fileName.endsWith('_modified')) {
+        fileName = fileName.substring(0, fileName.length - 9); // "_modified" 长度为9
+      }
+      
       try {
         if (kDebugMode) {
           print('KDEBUG: 正在保存文件 $i: $filePath');
@@ -807,16 +820,11 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           _showGlassDialog(
             title: const Text('批量保存'),
             content: Text('正在保存文件...\n已完成: $savedCount/${allFiles.length}\n当前: $fileName$fileExtension'),
+            
           );
         }
         
-        // 构建不带时间戳和_modified后缀的文件名
-        String cleanFileName = fileName;
-        if (cleanFileName.endsWith('_modified')) {
-          cleanFileName = cleanFileName.substring(0, cleanFileName.length - 9); // "_modified" 长度为9
-        }
-        
-        String suggestedFileName = '$cleanFileName$fileExtension';
+        String suggestedFileName = '$fileName$fileExtension';
         
         if (kDebugMode) {
           print('KDEBUG: 保存文件建议名: $suggestedFileName');
@@ -891,6 +899,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             child: const Text('确定'),
           ),
         ],
+        
       );
     }
   }
@@ -941,7 +950,12 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       
       // 构建不带_modified后缀的文件名
       String cleanFileName = baseFileName;
-      if (cleanFileName.endsWith('_modified')) {
+      // 移除可能存在的 '_modified' 后缀
+      if (cleanFileName.contains('_modified_')) {
+        // 找到最后一个 '_modified_' 的位置并截断
+        cleanFileName = cleanFileName.substring(0, cleanFileName.lastIndexOf('_modified_'));
+      } else if (cleanFileName.endsWith('_modified')) {
+        // 处理仅以 '_modified' 结尾的情况
         cleanFileName = cleanFileName.substring(0, cleanFileName.length - 9); // "_modified" 长度为9
       }
       
@@ -1031,7 +1045,11 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       );
 
       // 直接将标签写入当前编辑的文件（即widget.filePath）
-      await AudioTags.write(widget.filePath, updatedTag);
+      final success = await compute(saveAudioTagsInBackground, SaveTagsParams(widget.filePath, updatedTag));
+      
+      if (!success) {
+        throw Exception('在 isolate 中保存标签失败');
+      }
       
       if (kDebugMode) {
         print('KDEBUG: 标签已直接写入文件: ${widget.filePath}');
@@ -1059,6 +1077,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               child: const Text('确定'),
             ),
           ],
+          
         );
       }
     }
@@ -1067,17 +1086,15 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   /// 使用系统文件保存器将缓存中的文件复制到用户选择的位置
   Future<void> _saveWithFileSaver() async {
     try {
-      // 获取当前时间戳
-      String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       // 获取文件名和扩展名（使用用户编辑的值）
       String fileName = _filenameController.text;
       String fileExtension = _extensionController.text;
-      // 构建带时间戳的文件名
-      String timestampedFileName = '${fileName}_modified_$timestamp$fileExtension';
+      // 构建不带时间戳的文件名
+      String cleanFileName = '$fileName$fileExtension';
       
       if (kDebugMode) {
         print('KDEBUG: 准备使用文件保存器保存文件');
-        print('KDEBUG: 建议的文件名: $timestampedFileName');
+        print('KDEBUG: 建议的文件名: $cleanFileName');
         print('KDEBUG: 当前平台: ${Platform.operatingSystem}');
       }
       
@@ -1111,7 +1128,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       // 使用文件选择器让用户选择保存位置
       final String? outputFile = await FilePicker.platform.saveFile(
         dialogTitle: '请选择保存位置:',
-        fileName: timestampedFileName,
+        fileName: cleanFileName,
       );
 
       if (outputFile != null) {
@@ -1154,6 +1171,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                   child: const Text('确定'),
                 ),
               ],
+              
             );
           }
         } else {
@@ -1177,6 +1195,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                   child: const Text('确定'),
                 ),
               ],
+              
             );
           }
         }
@@ -1196,6 +1215,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 child: const Text('确定'),
               ),
             ],
+            
           );
         }
         
@@ -1243,6 +1263,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               child: const Text('确定'),
             ),
           ],
+          
         );
       }
     } catch (e) {
@@ -1269,6 +1290,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               child: const Text('确定'),
             ),
           ],
+          
         );
       }
     }
@@ -1818,6 +1840,13 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       // 删除文件名末尾的"_original"后缀（如果存在）
       if (fileName.endsWith('_original')) {
         fileName = fileName.substring(0, fileName.length - 9); // "_original" 长度为9
+      }
+      
+      // 删除文件名中的时间戳后缀（如 _modified_20251211_221817）
+      if (fileName.contains('_modified_')) {
+        fileName = fileName.substring(0, fileName.lastIndexOf('_modified_'));
+      } else if (fileName.endsWith('_modified')) {
+        fileName = fileName.substring(0, fileName.length - 9); // "_modified" 长度为9
       }
       
       buffer.write('$fileName$fileExtension');

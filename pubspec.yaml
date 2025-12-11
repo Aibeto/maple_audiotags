@@ -50,6 +50,7 @@ dependencies:
   http: ^1.6.0
   crypto: ^3.0.3
   desktop_drop: ^0.7.0
+  path: ^1.9.1
 
 
 dev_dependencies:

@@ -12,13 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // 导入Dart IO库，用于文件操作
 import 'dart:io';
 // 导入路径处理库
-// ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as path;
-// 导入Flutter服务库，用于获取应用目录
-// 导入批量编辑页面
-// import 'batch_edit_page.dart';
-// 导入标签编辑
-import 'edit.dart';
 // 导入标签编辑UI
 import 'tag_editor_ui.dart';
 // 导入设置页面
@@ -33,6 +27,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'config/glass_effect_config.dart';
+
+// 导入 isolate 工具
+import 'isolate_utils.dart';
 
 // 导入网络图片加载库
 import 'package:http/http.dart' as http;
@@ -476,7 +473,7 @@ class _HomePageState extends State<HomePage> {
       await Future.delayed(const Duration(milliseconds: 100));
       
       // 直接读取原始文件的标签，不复制到缓存
-      final tags = await readAudioTags(originalFilePath);
+      final tags = await compute(readAudioTagsInBackground, ReadTagsParams(originalFilePath));
       
       if (kDebugMode) {
         print('读取到的标签: $tags');
@@ -617,7 +614,7 @@ class _HomePageState extends State<HomePage> {
       }
       
       // 读取第一个文件的标签作为初始显示
-      final tags = await readAudioTags(filePaths[0]);
+      final tags = await compute(readAudioTagsInBackground, ReadTagsParams(filePaths[0]));
       
       if (kDebugMode) {
         print('读取到的第一个文件的标签: $tags');
@@ -1020,7 +1017,7 @@ class _HomePageState extends State<HomePage> {
       }
 
       // 读取第一个文件的标签作为初始显示
-      final tags = await readAudioTags(filePaths[0]);
+      final tags = await compute(readAudioTagsInBackground, ReadTagsParams(filePaths[0]));
 
       if (kDebugMode) {
         print('读取到的第一个文件的标签: $tags');
