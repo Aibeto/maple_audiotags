@@ -114,6 +114,3 @@ flutter:
     - family: MapleMono
       fonts:
         - asset: fonts/MapleMono-NF-CN-Regular.ttf
-    - family: MapleMono
-      fonts:
-        - asset: fonts/MapleMono-NF-CN-Regular.ttf

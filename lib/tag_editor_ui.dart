@@ -115,6 +115,14 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   
   /// 当前封面图片数据
   Uint8List? _currentCoverImage;
+  /// MD5 校验进度（0.0 - 1.0），用于在封面下方显示
+  ValueNotifier<double>? _md5ProgressNotifier;
+  /// MD5 校验是否正在进行
+  bool _isMd5Checking = false;
+  /// MD5 校验结果是否不一致（用于常驻显示不一致状态）
+  bool _md5Mismatch = false;
+  /// MD5 校验取消标志（可由封面下方的取消按钮触发）
+  ValueNotifier<bool>? _md5CancelledNotifier;
   
   /// 背景图片旋转动画控制器
   late AnimationController _backgroundRotationController;
@@ -178,7 +186,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               fillColor: Colors.transparent, // 背景透明，显示液态玻璃效果
             ),
             style: const TextStyle(
-              fontFamily: 'SourceHanSans',
+              fontFamily: 'MapleMono',
             ),
             keyboardType: keyboardType,
             enabled: enabled,
@@ -234,7 +242,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               fillColor: Colors.transparent, // 背景透明，显示液态玻璃效果
             ),
             style: const TextStyle(
-              fontFamily: 'SourceHanSans',
+              fontFamily: 'MapleMono',
             ),
             maxLines: null,
             expands: true,
@@ -373,44 +381,64 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         return;
       }
       
-      // 计算所有封面的MD5哈希值
+      // 计算所有封面的MD5哈希值，并实时显示可取消的进度对话框
       List<String> coverMD5s = [];
+      final int total = tags.length;
+      final ValueNotifier<double> md5Progress = ValueNotifier<double>(0.0);
+      final ValueNotifier<bool> md5Cancelled = ValueNotifier<bool>(false);
+
+      // 在封面区域显示进度（不再使用对话框）
+      setState(() {
+        _md5ProgressNotifier = md5Progress;
+        _md5CancelledNotifier = md5Cancelled;
+        _isMd5Checking = true;
+        _md5Mismatch = false;
+      });
+
       for (int i = 0; i < tags.length; i++) {
+        if (md5Cancelled.value) {
+          if (kDebugMode) print('KDEBUG: MD5 校验被用户取消');
+          break;
+        }
         Tag? tag = tags[i];
         if (tag != null && tag.pictures.isNotEmpty) {
           final bytes = tag.pictures.first.bytes;
           // 在 isolate 中计算 MD5 以避免阻塞 UI 线程
           final digest = await compute(md5.convert, bytes);
           coverMD5s.add(digest.toString());
+          // 更新进度
+          md5Progress.value = (i + 1) / total;
           if (kDebugMode) {
             print('KDEBUG: 文件 $i 封面MD5: ${digest.toString()}');
           }
+        } else {
+          // 如果没有封面也算入进度，避免对话框卡住
+          md5Progress.value = (i + 1) / total;
+          if (kDebugMode) {
+            print('KDEBUG: 文件 $i 没有封面，跳过 MD5 计算');
+          }
         }
       }
-      
-      if (kDebugMode) {
-        print('KDEBUG: 计算得到 ${coverMD5s.length} 个封面MD5');
+
+      // 结束检查：更新状态并清理进度显示
+      final bool wasCancelled = md5Cancelled.value;
+      bool allCoversSame = false;
+      if (!wasCancelled && coverMD5s.isNotEmpty) {
+        allCoversSame = coverMD5s.every((md5) => md5 == coverMD5s.first);
       }
+
+      setState(() {
+        _isMd5Checking = false;
+        _md5ProgressNotifier = null;
+        _md5CancelledNotifier = null;
+        // 取消视为不一致，非取消且一致则隐藏不一致提示
+        _md5Mismatch = wasCancelled ? true : !allCoversSame;
+        if (allCoversSame) {
+          _currentCoverImage = tags.first?.pictures.first.bytes;
+        }
+      });
       
-      // 检查所有MD5是否一致
-      bool allCoversSame = coverMD5s.every((md5) => md5 == coverMD5s.first);
       
-      if (allCoversSame) {
-        if (kDebugMode) {
-          print('KDEBUG: 所有文件的封面一致，显示第一个文件的封面');
-        }
-        
-        // 如果所有封面一致，则显示第一个文件的封面
-        if (mounted) {
-          setState(() {
-            _currentCoverImage = tags.first?.pictures.first.bytes;
-          });
-        }
-      } else {
-        if (kDebugMode) {
-          print('KDEBUG: 文件封面不一致，不显示封面');
-        }
-      }
     } catch (e) {
       if (kDebugMode) {
         print('KDEBUG: 检查封面一致性时出错: $e');
@@ -427,6 +455,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     Widget? title,
     Widget? content,
     List<Widget>? actions,
+    double? maxWidth,
+    ValueListenable<double>? progress,
   }) {
     return Center(
       child: LiquidGlassLayer(
@@ -441,7 +471,13 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               color: Theme.of(context).dialogBackgroundColor.withOpacity(0.9),
             ),
             padding: const EdgeInsets.all(24.0),
-            width: MediaQuery.of(context).size.width * 0.8,
+            width: (() {
+              final double deviceWidth = MediaQuery.of(context).size.width;
+              if (maxWidth != null) {
+                return min(deviceWidth * 0.98, maxWidth);
+              }
+              return deviceWidth * 0.8;
+            })(),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -449,7 +485,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 if (title != null) 
                   DefaultTextStyle(
                     style: TextStyle(
-                      fontFamily: 'SourceHanSans',
+                      fontFamily: 'MapleMono',
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).textTheme.titleLarge?.color,
@@ -463,11 +499,29 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                     ),
                     child: title,
                   ),
-                if (title != null && content != null) const SizedBox(height: 16),
+                if (title != null && (progress != null || content != null)) const SizedBox(height: 16),
+
+                if (progress != null) ...[
+                  ValueListenableBuilder<double>(
+                    valueListenable: progress,
+                    builder: (context, value, _) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LinearProgressIndicator(value: value.clamp(0.0, 1.0)),
+                          const SizedBox(height: 12),
+                          Text('${(value * 100).toStringAsFixed(0)}%'),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
                 if (content != null)
                   DefaultTextStyle(
                     style: TextStyle(
-                      fontFamily: 'SourceHanSans',
+                      fontFamily: 'MapleMono',
                       fontSize: 17,
                       color: Theme.of(context).textTheme.bodyMedium?.color,
                       height: 1.5,
@@ -481,6 +535,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                     ),
                     child: content,
                   ),
+
                 if (actions != null && actions.isNotEmpty) ...[
                   const SizedBox(height: 24),
                   Row(
@@ -504,14 +559,19 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     Widget? title,
     Widget? content,
     List<Widget>? actions,
+    double? maxWidth,
+    ValueListenable<double>? progress,
   }) {
     showDialog(
       context: context,
+      barrierDismissible: false, // 设置对话框不可通过点击外部取消
       builder: (BuildContext context) {
         return _buildGlassDialog(
           title: title,
           content: content,
           actions: actions,
+          maxWidth: maxWidth,
+          progress: progress,
         );
       },
     );
@@ -519,59 +579,49 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
 
   /// 还原所有更改到初始状态
   void _resetChanges() {
-    // 显示确认对话框
+    // 显示确认对话框并在确认时还原控件值
     _showGlassDialog(
-      title: const Text('确认还原'),
-      content: const Text('确定要还原所有更改吗？此操作不可撤销。'),
+      title: const Text('还原更改'),
+      content: const Text('确定要还原所有更改吗？'),
       actions: [
         TextButton(
-          onPressed: () {
-            Navigator.of(context).pop(); // 关闭对话框
-          },
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
           child: const Text('取消'),
         ),
         TextButton(
           onPressed: () {
-            Navigator.of(context).pop(); // 关闭确认对话框
+            Navigator.of(context, rootNavigator: true).pop(); // 关闭确认对话框
             // 还原所有文本控制器的值到初始状态
-            _titleController = TextEditingController(text: widget.tag.title);
-            _artistController = TextEditingController(text: widget.tag.trackArtist);
-            _albumController = TextEditingController(text: widget.tag.album);
-            _albumArtistController = TextEditingController(text: widget.tag.albumArtist);
-            _yearController = TextEditingController(text: widget.tag.year?.toString());
-            _genreController = TextEditingController(text: widget.tag.genre);
-            _trackNumberController = TextEditingController(text: widget.tag.trackNumber?.toString());
-            _trackTotalController = TextEditingController(text: widget.tag.trackTotal?.toString());
-            _discNumberController = TextEditingController(text: widget.tag.discNumber?.toString());
-            _discTotalController = TextEditingController(text: widget.tag.discTotal?.toString());
-            _lyricsController = TextEditingController(text: widget.tag.lyrics);
-            _durationController = TextEditingController(text: widget.tag.duration?.toString());
-            _bpmController = TextEditingController(text: widget.tag.bpm?.toString());
-            
-            // 还原文件名和扩展名
             String fileName = path.basenameWithoutExtension(widget.filePath);
             if (fileName.endsWith('_original')) {
               fileName = fileName.substring(0, fileName.length - 9);
             }
             String fileExtension = path.extension(widget.filePath);
-            _filenameController.text = fileName;
-            _extensionController.text = fileExtension;
-            
-            // 还原封面图片
-            Uint8List? originalImage;
-            final bool isBatchMode = widget.additionalFiles != null && widget.additionalFiles!.isNotEmpty;
-            if (!isBatchMode && widget.tag.pictures.isNotEmpty) {
-              originalImage = widget.tag.pictures.first.bytes;
-            }
-            
-            // 更新状态
+
             setState(() {
-              _currentCoverImage = originalImage;
+              _titleController.text = widget.tag.title ?? '';
+              _artistController.text = widget.tag.trackArtist ?? '';
+              _albumController.text = widget.tag.album ?? '';
+              _albumArtistController.text = widget.tag.albumArtist ?? '';
+              _yearController.text = widget.tag.year?.toString() ?? '';
+              _genreController.text = widget.tag.genre ?? '';
+              _trackNumberController.text = widget.tag.trackNumber?.toString() ?? '';
+              _trackTotalController.text = widget.tag.trackTotal?.toString() ?? '';
+              _discNumberController.text = widget.tag.discNumber?.toString() ?? '';
+              _discTotalController.text = widget.tag.discTotal?.toString() ?? '';
+              _lyricsController.text = widget.tag.lyrics ?? '';
+              _durationController.text = widget.tag.duration?.toString() ?? '';
+              _bpmController.text = widget.tag.bpm?.toString() ?? '';
+              _filenameController.text = fileName;
+              _extensionController.text = fileExtension;
+              final bool isBatchMode = widget.additionalFiles != null && widget.additionalFiles!.isNotEmpty;
+              _currentCoverImage = (!isBatchMode && widget.tag.pictures.isNotEmpty) ? widget.tag.pictures.first.bytes : null;
             });
           },
           child: const Text('确定'),
         ),
       ],
+      maxWidth: 560,
     );
   }
 
@@ -603,18 +653,23 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   Future<void> _saveTags() async {
     if (_formKey.currentState!.validate()) {
       try {
-        // 显示保存进度
+        // 创建进度与取消监听器并显示可取消的保存进度对话框
+        final ValueNotifier<double> saveProgress = ValueNotifier<double>(0.0);
+        final ValueNotifier<bool> saveCancelled = ValueNotifier<bool>(false);
         _showGlassDialog(
           title: const Text('保存中'),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 20),
-              Text('正在保存标签信息...'),
-            ],
-          ),
-          
+          content: const Text('正在保存标签信息...'),
+          maxWidth: 560,
+          progress: saveProgress,
+          actions: [
+            TextButton(
+              onPressed: () {
+                saveCancelled.value = true;
+                try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+              },
+              child: const Text('取消'),
+            ),
+          ],
         );
 
         // 检查是否为批量编辑模式
@@ -622,15 +677,18 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         
         if (isBatchMode) {
           // 批量编辑模式下保存所有文件
-          await _saveAllFiles();
+          await _saveAllFiles(saveProgress, saveCancelled);
         } else {
           // 单文件模式下直接保存
-          await _saveDirectly();
+          await _saveDirectly(saveProgress, saveCancelled);
         }
+        // 确保进度完成并关闭对话框
+        saveProgress.value = 1.0;
+        try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
       } on PlatformException catch (e) {
         // 关闭进度对话框
         if (mounted) {
-          Navigator.of(context).pop();
+          Navigator.of(context, rootNavigator: true).pop();
           
           // 显示错误消息
           if (kDebugMode) {
@@ -644,18 +702,18 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(context, rootNavigator: true).pop();
                 },
                 child: const Text('确定'),
               ),
             ],
-            
+            maxWidth: 560,
           );
         }
       } catch (e) {
         // 关闭进度对话框
         if (mounted) {
-          Navigator.of(context).pop();
+          Navigator.of(context, rootNavigator: true).pop();
           
           // 显示错误消息
           _showGlassDialog(
@@ -664,12 +722,12 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(context, rootNavigator: true).pop();
                 },
                 child: const Text('确定'),
               ),
             ],
-            
+            maxWidth: 560,
           );
           
           if (kDebugMode) {
@@ -682,7 +740,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   }
 
   /// 批量保存所有文件
-  Future<void> _saveAllFiles() async {
+  Future<void> _saveAllFiles(ValueNotifier<double>? progress, ValueNotifier<bool>? cancel) async {
     try {
       if (kDebugMode) {
         print('KDEBUG: 开始批量保存文件');
@@ -738,6 +796,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         try {
           await AudioTags.write(filePath, updatedTag);
           successCount++;
+          // 更新进度（标签写入阶段占总进度的前50%）
+          final int total = allFiles.length;
+          progress?.value = ((i + 1) / total) * 0.5;
           if (kDebugMode) {
             print('KDEBUG: 文件保存成功: $filePath');
           }
@@ -747,6 +808,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           }
           failedFiles.add(filePath);
           // 继续保存其他文件，不中断整个过程
+          final int total = allFiles.length;
+          progress?.value = ((i + 1) / total) * 0.5;
         }
       }
       
@@ -755,7 +818,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       }
       
       // 为每个文件分别执行导出流程
-      await _saveEachFileWithFileSaver(allFiles, successCount, failedFiles);
+      await _saveEachFileWithFileSaver(allFiles, successCount, failedFiles, progress, cancel);
     } catch (e) {
       if (kDebugMode) {
         print('KDEBUG: 批量保存标签失败: $e');
@@ -768,22 +831,32 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   /// [allFiles] 所有需要保存的文件路径列表
   /// [successCount] 成功保存标签的文件数量
   /// [failedFiles] 保存标签失败的文件列表
-  Future<void> _saveEachFileWithFileSaver(List<String> allFiles, int successCount, List<String> failedFiles) async {
+  Future<void> _saveEachFileWithFileSaver(List<String> allFiles, int successCount, List<String> failedFiles, ValueNotifier<double>? progress, ValueNotifier<bool>? cancel) async {
     if (kDebugMode) {
       print('KDEBUG: 开始为每个文件执行保存流程，总文件数: ${allFiles.length}');
     }
     
     // 关闭之前的进度对话框
     if (mounted) {
-      Navigator.of(context).pop();
+      Navigator.of(context, rootNavigator: true).pop();
     }
     
-    // 显示批量保存进度
+    // 显示批量保存进度（绑定进度监听器），允许取消
     if (mounted) {
       _showGlassDialog(
         title: const Text('批量保存'),
         content: Text('正在保存文件...\n已完成: 0/${allFiles.length}'),
-        
+        maxWidth: 560,
+        progress: progress,
+        actions: [
+          // TextButton(
+          //   onPressed: () {
+          //     cancel?.value = true;
+          //     try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+          //   },
+            // child: const Text('取消'),
+          // ),
+        ],
       );
     }
     
@@ -792,6 +865,11 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     
     // 为每个文件执行保存操作
     for (int i = 0; i < allFiles.length; i++) {
+      // 检查是否被取消
+      if (cancel?.value == true) {
+        if (kDebugMode) print('KDEBUG: 保存操作被取消，停止导出');
+        break;
+      }
       String filePath = allFiles[i];
       String fileName = path.basenameWithoutExtension(filePath);
       String fileExtension = path.extension(filePath);
@@ -814,13 +892,23 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           print('KDEBUG: 处理后的文件名: $fileName$fileExtension');
         }
         
-        // 更新进度显示
+        // 更新进度显示并刷新进度值（导出阶段占后50%）
         if (mounted) {
-          Navigator.of(context).pop(); // 关闭之前的对话框
+          try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
           _showGlassDialog(
             title: const Text('批量保存'),
             content: Text('正在保存文件...\n已完成: $savedCount/${allFiles.length}\n当前: $fileName$fileExtension'),
-            
+            maxWidth: 560,
+            progress: progress,
+            actions: [
+              // TextButton(
+              //   onPressed: () {
+              //     cancel?.value = true;
+              //     try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+              //   },
+                // child: const Text('取消'),
+              // ),
+            ],
           );
         }
         
@@ -864,6 +952,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         }
         
         savedCount++;
+        // 更新导出阶段进度（从0.5到1.0）
+        final int total = allFiles.length;
+        progress?.value = 0.5 + (savedCount / total) * 0.5;
       } catch (e) {
         saveFailedFiles.add(filePath);
         if (kDebugMode) {
@@ -871,10 +962,28 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         }
       }
     }
+
+    // 如果是用户取消，则显示取消提示
+    if (cancel?.value == true) {
+      if (mounted) {
+        _showGlassDialog(
+          title: const Text('已取消'),
+          content: const Text('保存操作已取消'),
+          actions: [
+            TextButton(
+              onPressed: () { Navigator.of(context, rootNavigator: true).pop(); },
+              child: const Text('确定'),
+            ),
+          ],
+          maxWidth: 560,
+        );
+      }
+      return;
+    }
     
     // 显示最终结果
     if (mounted) {
-      Navigator.of(context).pop(); // 关闭进度对话框
+      Navigator.of(context, rootNavigator: true).pop(); // 关闭进度对话框
       
       String resultMessage = '标签保存完成:\n'
           '成功保存标签: $successCount/${allFiles.length}\n'
@@ -894,12 +1003,12 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(context, rootNavigator: true).pop();
             },
             child: const Text('确定'),
           ),
         ],
-        
+        maxWidth: 560,
       );
     }
   }
@@ -938,7 +1047,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(context, rootNavigator: true).pop();
                 },
                 child: const Text('确定'),
               ),
@@ -1005,7 +1114,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context, rootNavigator: true).pop();
               },
               child: const Text('确定'),
             ),
@@ -1018,7 +1127,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   }
   
   /// 直接保存标签到当前文件，并提供选项将文件保存到用户指定位置
-  Future<void> _saveDirectly() async {
+  Future<void> _saveDirectly(ValueNotifier<double>? progress, ValueNotifier<bool>? cancel) async {
     try {
       // Prepare image data
       List<Picture>? pictures;
@@ -1057,13 +1166,13 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       }
       
       // 保存后使用文件保存器将文件复制到用户选择的位置
-      await _saveWithFileSaver();
+      await _saveWithFileSaver(progress, cancel);
     } catch (e) {
       if (kDebugMode) {
         print('KDEBUG: 直接保存标签失败: $e');
       }
       if (mounted) {
-        Navigator.of(context).pop(); // 关闭进度对话框
+        Navigator.of(context, rootNavigator: true).pop(); // 关闭进度对话框
         
         // 使用对话框显示错误
         _showGlassDialog(
@@ -1072,7 +1181,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context, rootNavigator: true).pop();
               },
               child: const Text('确定'),
             ),
@@ -1084,8 +1193,12 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   }
 
   /// 使用系统文件保存器将缓存中的文件复制到用户选择的位置
-  Future<void> _saveWithFileSaver() async {
+  Future<void> _saveWithFileSaver(ValueNotifier<double>? progress, ValueNotifier<bool>? cancel) async {
     try {
+      if (cancel?.value == true) {
+        if (kDebugMode) print('KDEBUG: 保存已被取消，跳过文件保存器流程');
+        return;
+      }
       // 获取文件名和扩展名（使用用户编辑的值）
       String fileName = _filenameController.text;
       String fileExtension = _extensionController.text;
@@ -1130,6 +1243,10 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         dialogTitle: '请选择保存位置:',
         fileName: cleanFileName,
       );
+      if (cancel?.value == true) {
+        if (kDebugMode) print('KDEBUG: 保存已被取消，用户未选择保存位置');
+        return;
+      }
 
       if (outputFile != null) {
         if (kDebugMode) {
@@ -1140,6 +1257,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         // 将文件复制到用户选择的位置
         final saveFile = File(widget.filePath);
         await saveFile.copy(outputFile);
+        // 更新进度为完成
+        progress?.value = 1.0;
         
         // 如果是批量编辑模式，提示用户其他文件也需要单独保存
         if (isBatchMode) {
@@ -1153,27 +1272,26 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             print('KDEBUG: 其中第一个文件已导出到: $outputFile');
           }
           
-          if (mounted) {
-            Navigator.of(context).pop(); // 关闭进度对话框
-            
-            // 显示成功消息
-            _showGlassDialog(
-              title: const Text('保存成功'),
-              content: Text(
-                  '已保存 ${allFiles.length} 个文件的标签。\n'
-                  '第一个文件已导出到: $outputFile\n'
-                  '其他文件保存在缓存中，请手动导出。'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('确定'),
-                ),
-              ],
-              
-            );
-          }
+            if (mounted) {
+              try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+              // 显示成功消息
+              _showGlassDialog(
+                title: const Text('保存成功'),
+                content: Text(
+                    '已保存 ${allFiles.length} 个文件的标签。\n'
+                    '第一个文件已导出到: $outputFile\n'
+                    '其他文件保存在缓存中，请手动导出。'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context, rootNavigator: true).pop();
+                    },
+                    child: const Text('确定'),
+                  ),
+                ],
+                maxWidth: 560,
+              );
+            }
         } else {
           // 单文件模式
           if (kDebugMode) {
@@ -1181,8 +1299,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           }
           
           if (mounted) {
-            Navigator.of(context).pop(); // 关闭进度对话框
-            
+            try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
             // 显示成功消息
             _showGlassDialog(
               title: const Text('保存成功'),
@@ -1190,19 +1307,19 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(context, rootNavigator: true).pop();
                   },
                   child: const Text('确定'),
                 ),
               ],
-              
+              maxWidth: 560,
             );
           }
         }
       } else {
         // 取消保存操作
         if (mounted) {
-          Navigator.of(context).pop(); // 关闭进度对话框
+          Navigator.of(context, rootNavigator: true).pop(); // 关闭进度对话框
           
           _showGlassDialog(
             title: const Text('操作取消'),
@@ -1210,7 +1327,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(context, rootNavigator: true).pop();
                 },
                 child: const Text('确定'),
               ),
@@ -1249,7 +1366,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       }
       
       if (mounted) {
-        Navigator.of(context).pop(); // 关闭进度对话框
+        Navigator.of(context, rootNavigator: true).pop(); // 关闭进度对话框
         
         // 显示错误消息
         _showGlassDialog(
@@ -1258,7 +1375,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context, rootNavigator: true).pop();
               },
               child: const Text('确定'),
             ),
@@ -1271,7 +1388,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         print('KDEBUG: 使用文件保存器保存失败: $e');
       }
       if (mounted) {
-        Navigator.of(context).pop(); // 关闭进度对话框
+        Navigator.of(context, rootNavigator: true).pop(); // 关闭进度对话框
         
         _showGlassDialog(
           title: const Text(
@@ -1285,7 +1402,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context, rootNavigator: true).pop();
               },
               child: const Text('确定'),
             ),
@@ -1357,7 +1474,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       }
       
       if (mounted) {
-        Navigator.of(context).pop(); // 关闭进度对话框
+        Navigator.of(context, rootNavigator: true).pop(); // 关闭进度对话框
         
         // 显示成功消息
         Fluttertoast.showToast(
@@ -1386,7 +1503,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context, rootNavigator: true).pop();
               },
               child: const Text('确定'),
             ),
@@ -1490,7 +1607,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(context, rootNavigator: true).pop();
                 },
                 child: const Text('确定'),
               ),
@@ -1600,56 +1717,147 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             ),
           ),
           const SizedBox(height: 16),
+          // MD5 校验进度与结果显示（封面下方）
+          (_isMd5Checking && _md5ProgressNotifier != null)
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ValueListenableBuilder<double>(
+                          valueListenable: _md5ProgressNotifier!,
+                          builder: (context, value, _) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                LinearProgressIndicator(value: value.clamp(0.0, 1.0)),
+                                const SizedBox(height: 6),
+                                Text('${(value * 100).toStringAsFixed(0)}%'),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      // const SizedBox(width: 12),
+                      // TextButton(
+                      //   onPressed: () {
+                      //     _md5CancelledNotifier?.value = true;
+                      //   },
+                      //   child: const Text('取消'),
+                      // ),
+                    ],
+                  ),
+                )
+              : (_md5Mismatch
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.warning, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Text('封面不一致', style: TextStyle(color: Colors.orange)),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink()),
         ],
       );
     } else {
-      return Center(
-        child: GestureDetector(
-          onTap: _selectNewCoverImage,
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.5,
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Stack(
-              children: [
-                // 液态玻璃
-                Positioned.fill(
-                  child: LiquidGlassLayer(
-                    settings: GlassEffectConfig.baseSettings(level: effectLevel),
-                    child: LiquidGlass.inLayer(
-                      shape: LiquidRoundedRectangle(
-                        borderRadius: const Radius.circular(12.0),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12.0),
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.black.withOpacity(0.2)
-                              : Colors.white.withOpacity(0.2),
+      return Column(
+        children: [
+          const SizedBox(height: 16),
+          Center(
+            child: GestureDetector(
+              onTap: _selectNewCoverImage,
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.5,
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Stack(
+                  children: [
+                    // 液态玻璃
+                    Positioned.fill(
+                      child: LiquidGlassLayer(
+                        settings: GlassEffectConfig.baseSettings(level: effectLevel),
+                        child: LiquidGlass.inLayer(
+                          shape: LiquidRoundedRectangle(
+                            borderRadius: const Radius.circular(12.0),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12.0),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.black.withOpacity(0.2)
+                                  : Colors.white.withOpacity(0.2),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
-                        Text('点击添加封面图片', style: TextStyle(color: Colors.grey)),
-                      ],
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
+                            Text('点击添加封面图片', style: TextStyle(color: Colors.grey)),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                  ],
                 ),
-                const SizedBox(height: 16),
-              ],
+              ),
             ),
           ),
-        ),
+          const SizedBox(height: 12),
+          (_isMd5Checking && _md5ProgressNotifier != null)
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ValueListenableBuilder<double>(
+                          valueListenable: _md5ProgressNotifier!,
+                          builder: (context, value, _) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                LinearProgressIndicator(value: value.clamp(0.0, 1.0)),
+                                const SizedBox(height: 6),
+                                Text('${(value * 100).toStringAsFixed(0)}%'),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      // const SizedBox(width: 12),
+                      // TextButton(
+                      //   onPressed: () {
+                      //     _md5CancelledNotifier?.value = true;
+                      //   },
+                      //   child: const Text('取消'),
+                      // ),
+                    ],
+                  ),
+                )
+              : (_md5Mismatch
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Row(
+                        children: const [
+                          // Icon(Icons.warning, color: ui.Color(0xFFffff00)),
+                          SizedBox(width: 8),
+                          Text('封面不一致，无法统一显示封面', style: TextStyle(color: Colors.orange, fontFamily: 'MapleMono')),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink()),
+        ],
       );
     }
   }
@@ -1928,7 +2136,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 enabled: false, // 禁用编辑
                 textAlign: TextAlign.start, // 文本左对齐
                 style: const TextStyle(
-                  fontFamily: 'SourceHanSans',
+                  fontFamily: 'MapleMono',
                   fontSize: 14,
                 ),
               ),
