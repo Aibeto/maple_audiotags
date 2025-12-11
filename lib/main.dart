@@ -36,6 +36,7 @@ import 'config/glass_effect_config.dart';
 
 // 导入网络图片加载库
 import 'package:http/http.dart' as http;
+import 'dart:ui';
 
 // 程序入口点，使用async关键字支持异步操作
 void main() async {
@@ -704,10 +705,13 @@ class _HomePageState extends State<HomePage> {
           // 模糊层 (根据主题模式使用不同颜色的遮罩)
           if (_backgroundImageBytes != null)
             Positioned.fill(
-              child: Container(
-                color: Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.black.withValues(alpha: 0.2) 
-                  : Colors.white.withValues(alpha: 0.2),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                child: Container(
+                  color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.black.withValues(alpha: 0.25) 
+                    : Colors.white.withValues(alpha: 0.25),
+                ),
               ),
             ),
           // 页面内容

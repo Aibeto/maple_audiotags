@@ -6,6 +6,7 @@ import 'config/glass_effect_config.dart';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'dart:ui';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -79,10 +80,13 @@ class _SettingsPageState extends State<SettingsPage> {
           // 模糊层 (根据主题模式使用不同颜色的遮罩)
           if (_backgroundImageBytes != null)
             Positioned.fill(
-              child: Container(
-                color: Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.black.withValues(alpha: 0.25) 
-                  : Colors.white.withValues(alpha: 0.25),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                child: Container(
+                  color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.black.withValues(alpha: 0.25) 
+                    : Colors.white.withValues(alpha: 0.25),
+                ),
               ),
             ),
           // 页面内容容器，限制最大宽度
