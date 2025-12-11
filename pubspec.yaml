@@ -42,12 +42,14 @@ dependencies:
   permission_handler: ^11.3.1
   intl: ^0.20.2
   file_picker: ^8.1.0
+  cross_file: ^0.3.4
   exif: ^3.3.0
   flutter_exif_rotation: ^0.5.2
   image: ^4.5.4
   liquid_glass_renderer: ^0.1.1-dev.10
   http: ^1.6.0
   crypto: ^3.0.3
+  desktop_drop: ^0.7.0
 
 
 dev_dependencies:
@@ -102,3 +104,15 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  # Custom fonts
+  fonts:
+    - family: SourceHanSans
+      fonts:
+        - asset: fonts/SourceHanSans-Medium.ttc
+    - family: MapleMono
+      fonts:
+        - asset: fonts/MapleMono-NF-CN-Regular.ttf
+    - family: MapleMono
+      fonts:
+        - asset: fonts/MapleMono-NF-CN-Regular.ttf

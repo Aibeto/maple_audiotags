@@ -30,6 +30,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 // 导入文件选择器
 import 'package:file_picker/file_picker.dart';
+import 'package:cross_file/cross_file.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'config/glass_effect_config.dart';
 
@@ -39,6 +40,8 @@ import 'dart:ui';
 
 // 导入路径提供器，用于获取临时目录
 import 'package:path_provider/path_provider.dart';
+// 导入桌面拖放库
+import 'package:desktop_drop/desktop_drop.dart';
 
 // 程序入口点，使用async关键字支持异步操作
 Future<void> _clearCacheDirectory() async {
@@ -157,6 +160,8 @@ class _MyAppState extends State<MyApp> {
           theme: ThemeData(
             // 使用Material Design 3
             useMaterial3: true,
+            // 设置默认字体
+            fontFamily: 'MapleMono',
             // 颜色方案配置，优先使用系统动态颜色
             colorScheme: lightDynamic ??
                 // 如果系统不支持动态颜色，则使用蓝色种子颜色生成
@@ -171,6 +176,8 @@ class _MyAppState extends State<MyApp> {
           darkTheme: ThemeData(
             // 使用Material Design 3
             useMaterial3: true,
+            // 设置默认字体
+            fontFamily: 'MapleMono',
             // 颜色方案配置，优先使用系统动态颜色
             colorScheme: darkDynamic ??
                 // 如果系统不支持动态颜色，则使用蓝色种子颜色生成
@@ -742,67 +749,88 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-          // 页面内容
-          Center(
-            // 居中布局组件
-            child: Column(
-              // 居中对齐
-              mainAxisAlignment: MainAxisAlignment.center,
-              // 子组件列表
-              children: <Widget>[
-                Icon(
-                  Icons.music_note,
-                  size: 100,
-                  color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.white 
-                    : Colors.black,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  '选择音频文件开始编辑标签',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Theme.of(context).brightness == Brightness.dark 
-                      ? Colors.white 
-                      : Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                // 选择文件按钮
-                LiquidGlassLayer(
-                  settings: GlassEffectConfig.fileSelectorSettings(
-                    level: _effectLevel <= 1 
-                      ? EffectLevel.low 
-                      : (_effectLevel == 2 ? EffectLevel.medium : EffectLevel.high)
-                  ),
-                  child: LiquidGlass.inLayer(
-                    shape: LiquidRoundedRectangle(
-                      borderRadius: const Radius.circular(28.0),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(28.0),
+          // DropTarget 包装整个背景区域
+          Positioned.fill(
+            child: DropTarget(
+              onDragDone: (detail) {
+                // 处理拖拽进来的文件
+                _processDroppedFiles(detail.files);
+              },
+              child: Container(
+                color: Colors.transparent, // 透明背景，不影响视觉效果
+                child: Center(
+                  // 居中布局组件
+                  child: Column(
+                    // 居中对齐
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    // 子组件列表
+                    children: <Widget>[
+                      Icon(
+                        Icons.music_note,
+                        size: 100,
+                        color: Theme.of(context).brightness == Brightness.dark 
+                          ? Colors.white 
+                          : Colors.black,
                       ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _selectMusicFile,
-                          borderRadius: BorderRadius.circular(28.0),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.music_note),
-                              SizedBox(width: 8),
-                              Text('选择音频文件'),
-                            ],
+                      const SizedBox(height: 20),
+                      Text(
+                        '选择音频文件开始编辑标签',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Theme.of(context).brightness == Brightness.dark 
+                            ? Colors.white 
+                            : Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      // 选择文件按钮
+                      LiquidGlassLayer(
+                        settings: GlassEffectConfig.fileSelectorSettings(
+                          level: _effectLevel <= 1 
+                            ? EffectLevel.low 
+                            : (_effectLevel == 2 ? EffectLevel.medium : EffectLevel.high)
+                        ),
+                        child: LiquidGlass.inLayer(
+                          shape: LiquidRoundedRectangle(
+                            borderRadius: const Radius.circular(28.0),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(28.0),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _selectMusicFile,
+                                borderRadius: BorderRadius.circular(28.0),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.music_note),
+                                    SizedBox(width: 8),
+                                    Text('选择音频文件'),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      Text(
+                        '或者将音频文件拖拽到这里',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).brightness == Brightness.dark 
+                            ? Colors.white70 
+                            : Colors.black54,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
           // 右上角操作按钮列表
@@ -906,5 +934,185 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+
+  /// 处理拖拽进来的文件
+  void _processDroppedFiles(List<XFile> files) async {
+    if (files.isEmpty) return;
+
+    // 过滤出音频文件
+    List<XFile> audioFiles = files.where((file) {
+      String? extension = path.extension(file.path).toLowerCase();
+      return ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a'].contains(extension);
+    }).toList();
+
+    if (audioFiles.isEmpty) {
+      Fluttertoast.showToast(msg: '未找到支持的音频文件');
+      return;
+    }
+
+    // 限制最多处理100个文件
+    if (audioFiles.length > 100) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('文件数量过多'),
+              content: Text('您拖入了 ${audioFiles.length} 个文件，超过最大限制 100 个文件。\n请减少拖入的文件数量。'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+      return;
+    }
+
+    // 显示进度对话框
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('正在处理文件'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 20),
+                Text('正在处理 ${audioFiles.length} 个文件...'),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    try {
+      // 确保UI有时间渲染进度对话框
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      List<String> filePaths = [];
+      String? firstOriginalFilePath;
+
+      // 收集所有文件路径
+      for (int i = 0; i < audioFiles.length; i++) {
+        final XFile file = audioFiles[i];
+        final String fileName = path.basename(file.path);
+        // 记录第一个文件的原始路径
+        if (i == 0) {
+          firstOriginalFilePath = file.path;
+        }
+
+        if (kDebugMode) {
+          print('KDEBUG: 处理第 ${i+1}/${audioFiles.length} 个文件: $fileName');
+        }
+
+        filePaths.add(file.path);
+      }
+
+      // 读取第一个文件的标签作为初始显示
+      final tags = await readAudioTags(filePaths[0]);
+
+      if (kDebugMode) {
+        print('读取到的第一个文件的标签: $tags');
+      }
+
+      // 关闭进度对话框
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // 如果成功读取标签，则导航到标签编辑界面
+      // 直接使用原始文件路径
+      if (tags != null && mounted) {
+        // 如果只有一个文件，直接进入编辑界面
+        if (filePaths.length == 1) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TagEditorUI(
+                tag: tags,
+                filePath: filePaths[0], // 直接使用原始文件路径
+                realFilePath: firstOriginalFilePath, // 传递真实的原始文件路径
+              ),
+            ),
+          );
+        } else {
+          // 多个文件，进入批量编辑模式
+          // 从文件路径列表中移除第一个，因为它已经是主文件
+          List<String> additionalFiles = filePaths.sublist(1);
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TagEditorUI(
+                tag: tags,
+                filePath: filePaths[0], // 直接使用第一个原始文件路径
+                realFilePath: firstOriginalFilePath, // 传递真实的原始文件路径
+                additionalFiles: additionalFiles, // 传递额外的文件列表
+              ),
+            ),
+          );
+        }
+      } else if (mounted) {
+        // 显示对话框通知用户未能读取标签信息
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('读取失败'),
+              content: const Text('未能读取文件标签信息'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      // 关闭可能仍在显示的进度对话框
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      if (kDebugMode) {
+        print('处理拖拽文件时出错: $e');
+      }
+
+      // 显示错误消息给用户
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('处理文件出错'),
+              content: Text('处理文件时出错: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    }
   }
 }

@@ -172,6 +172,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               filled: true,
               fillColor: Colors.transparent, // 背景透明，显示液态玻璃效果
             ),
+            style: const TextStyle(
+              fontFamily: 'SourceHanSans',
+            ),
             keyboardType: keyboardType,
             enabled: enabled,
           ),
@@ -224,6 +227,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               ),
               filled: true,
               fillColor: Colors.transparent, // 背景透明，显示液态玻璃效果
+            ),
+            style: const TextStyle(
+              fontFamily: 'SourceHanSans',
             ),
             maxLines: null,
             expands: true,
@@ -431,6 +437,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 if (title != null) 
                   DefaultTextStyle(
                     style: TextStyle(
+                      fontFamily: 'SourceHanSans',
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).textTheme.titleLarge?.color,
@@ -448,6 +455,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 if (content != null)
                   DefaultTextStyle(
                     style: TextStyle(
+                      fontFamily: 'SourceHanSans',
                       fontSize: 17,
                       color: Theme.of(context).textTheme.bodyMedium?.color,
                       height: 1.5,
@@ -1815,6 +1823,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             enabled: false, // 禁用编辑
             textAlign: TextAlign.start, // 文本左对齐
             style: const TextStyle(
+              fontFamily: 'SourceHanSans',
               fontSize: 14,
             ),
           ),
@@ -2001,6 +2010,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                               Text(
                                 '还原更改',
                                 style: TextStyle(
+                                  fontFamily: 'MapleMono',
                                   fontSize: 14,
                                   fontWeight: FontWeight.normal,
                                   color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -2039,6 +2049,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                               Text(
                                 '保存',
                                 style: TextStyle(
+                                  fontFamily: 'MapleMono',
                                   fontSize: 14,
                                   fontWeight: FontWeight.normal,
                                   color: Theme.of(context).textTheme.bodyMedium?.color,

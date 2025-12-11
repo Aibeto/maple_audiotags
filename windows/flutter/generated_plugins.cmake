@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   audiotags
+  desktop_drop
   dynamic_color
   permission_handler_windows
 )

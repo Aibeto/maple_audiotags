@@ -134,8 +134,9 @@ bool Win32Window::Create(const std::wstring& title,
   UINT dpi = FlutterDesktopGetDpiForMonitor(monitor);
   double scale_factor = dpi / 96.0;
 
+  // 添加拖拽接受功能
   HWND window = CreateWindow(
-      window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
+      window_class, title.c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
       Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
       Scale(size.width, scale_factor), Scale(size.height, scale_factor),
       nullptr, nullptr, GetModuleHandle(nullptr), this);
@@ -216,6 +217,14 @@ Win32Window::MessageHandler(HWND hwnd,
     case WM_DWMCOLORIZATIONCOLORCHANGED:
       UpdateTheme(hwnd);
       return 0;
+      
+    // 添加拖拽相关消息处理
+    case WM_DROPFILES:
+      // 将拖拽文件的消息传递给Flutter
+      if (child_content_ != nullptr) {
+        SendMessage(child_content_, WM_DROPFILES, wparam, lparam);
+      }
+      return 0;
   }
 
   return DefWindowProc(window_handle_, message, wparam, lparam);
@@ -247,6 +256,9 @@ void Win32Window::SetChildContent(HWND content) {
              frame.bottom - frame.top, true);
 
   SetFocus(child_content_);
+  
+  // 启用拖拽文件功能
+  DragAcceptFiles(window_handle_, TRUE);
 }
 
 RECT Win32Window::GetClientArea() {
