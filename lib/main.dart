@@ -1,6 +1,5 @@
 // 导入Flutter基础Material设计组件库
 // ignore_for_file: use_build_context_synchronously
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -38,10 +37,39 @@ import 'config/glass_effect_config.dart';
 import 'package:http/http.dart' as http;
 import 'dart:ui';
 
+// 导入路径提供器，用于获取临时目录
+import 'package:path_provider/path_provider.dart';
+
 // 程序入口点，使用async关键字支持异步操作
+Future<void> _clearCacheDirectory() async {
+  try {
+    // 获取临时目录
+    final tempDir = await getTemporaryDirectory();
+    // 删除临时目录下的所有文件和文件夹
+    if (await tempDir.exists()) {
+      await tempDir.delete(recursive: true);
+      // 重新创建临时目录
+      await tempDir.create(recursive: true);
+    }
+    if (kDebugMode) {
+      print('KDEBUG: 缓存目录已清理');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('KDEBUG: 清理缓存目录时出错: $e');
+    }
+  }
+}
+
 void main() async {
   // 确保Flutter框架初始化完成
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 如果是Android系统，清理缓存目录
+  if (Platform.isAndroid) {
+    await _clearCacheDirectory();
+  }
+  
   // 获取共享偏好设置实例，用于读取和保存用户设置
   SharedPreferences prefs = await SharedPreferences.getInstance();
   // 从存储中读取暗色模式设置，如果不存在则返回null

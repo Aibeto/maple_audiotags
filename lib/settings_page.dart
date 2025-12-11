@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'config/glass_effect_config.dart';
-import 'dart:math';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'dart:ui';
