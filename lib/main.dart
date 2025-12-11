@@ -357,15 +357,15 @@ class _HomePageState extends State<HomePage> {
         return;
       }
       
-      // 限制最多处理100个文件
-      if (result.files.length > 100) {
+      // 限制最多处理文件个数
+      if (result.files.length > 1000) {
         if (mounted) {
           showDialog(
             context: context,
             builder: (BuildContext context) {
               return AlertDialog(
                 title: const Text('文件数量过多'),
-                content: Text('您选择了 ${result.files.length} 个文件，超过最大限制 100 个文件。\n请减少选择的文件数量。'),
+                content: Text('您选择了 ${result.files.length} 个文件，超过最大限制 1000 个文件。\n请减少选择的文件数量。'),
                 actions: [
                   TextButton(
                     onPressed: () {
