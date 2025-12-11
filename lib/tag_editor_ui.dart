@@ -5,13 +5,14 @@ import 'dart:async';
 import 'dart:io' show Platform, File;
 import 'dart:ui' as ui;
 import 'dart:math';
-// 添加用于计算MD5哈希值
+
 
 import 'package:audiotags/audiotags.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
@@ -21,17 +22,14 @@ import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:crypto/crypto.dart'; // 添加用于计算MD5哈希值
 
-
-// 上间距
-
-
-
 /// 音频标签编辑UI组件
 /// 提供一个表单界面用于查看和编辑音频文件的标签信息
 class TagEditorUI extends StatefulWidget {
   /// 构造函数
   /// [tag] 需要编辑的标签信息
   /// [filePath] 音频文件路径
+  /// [realFilePath] 真实文件路径（如果可以获取）
+  /// [additionalFiles] 额外的文件列表（用于批量编辑模式）
   const TagEditorUI({
     super.key,
     required this.tag,
@@ -46,7 +44,7 @@ class TagEditorUI extends StatefulWidget {
   /// 音频文件路径（当前工作文件，通常是缓存中的原始文件）
   final String filePath;
   
-  /// 真实文件路径（如果可以获取到的话）
+  /// 真实文件路径（如果可以获取）
   final String? realFilePath;
   
   /// 额外的文件列表（用于批量编辑模式）
@@ -57,9 +55,9 @@ class TagEditorUI extends StatefulWidget {
 }
 
 class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin {
-  // 添加效果等级参数
+  // 添加效果等级参数，控制UI特效强度
   EffectLevel effectLevel = EffectLevel.medium;
-  // 效果等级数值
+  // 效果等级数值，用于从SharedPreferences加载设置
   int _effectLevelValue = 1;
 
   /// 控制器用于编辑标题
@@ -121,11 +119,13 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   
   /// 背景图片旋转动画值
   late Animation<double> _backgroundRotationAnimation;
-  
-  /// 图片刷新定时器
-  // Timer? _refreshTimer; // 已移除，不再使用定时器刷新
+
 
   /// 创建带液态玻璃效果背景的文本输入框组件
+  /// [controller] 文本控制器
+  /// [labelText] 标签文本
+  /// [keyboardType] 键盘类型，默认为文本键盘
+  /// [enabled] 是否启用输入框，默认为true
   Widget _buildGlassTextFormField({
     required TextEditingController controller,
     required String labelText,
@@ -377,7 +377,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         Tag? tag = tags[i];
         if (tag != null && tag.pictures.isNotEmpty) {
           final bytes = tag.pictures.first.bytes;
-          final digest = md5.convert(bytes);
+          // 在 isolate 中计算 MD5 以避免阻塞 UI 线程
+          final digest = await compute(md5.convert, bytes);
           coverMD5s.add(digest.toString());
           if (kDebugMode) {
             print('KDEBUG: 文件 $i 封面MD5: ${digest.toString()}');
@@ -417,6 +418,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   }
 
   /// 创建带液态玻璃效果的对话框
+  /// [title] 对话框标题
+  /// [content] 对话框内容
+  /// [actions] 对话框操作按钮
   Widget _buildGlassDialog({
     Widget? title,
     Widget? content,
@@ -491,6 +495,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   }
 
   /// 显示带液态玻璃效果的对话框
+  /// [title] 对话框标题
+  /// [content] 对话框内容
+  /// [actions] 对话框操作按钮
   void _showGlassDialog({
     Widget? title,
     Widget? content,
@@ -753,6 +760,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   }
   
   /// 为每个文件分别执行导出流程
+  /// [allFiles] 所有需要保存的文件路径列表
+  /// [successCount] 成功保存标签的文件数量
+  /// [failedFiles] 保存标签失败的文件列表
   Future<void> _saveEachFileWithFileSaver(List<String> allFiles, int successCount, List<String> failedFiles) async {
     if (kDebugMode) {
       print('KDEBUG: 开始为每个文件执行保存流程，总文件数: ${allFiles.length}');
@@ -886,6 +896,10 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   }
   
   /// Android平台的单文件保存方法
+  /// [sourceFilePath] 源文件路径
+  /// [baseFileName] 基础文件名
+  /// [fileExtension] 文件扩展名
+  /// [timestamp] 时间戳（目前未使用）
   Future<void> _saveFileForAndroidSingle(String sourceFilePath, String baseFileName, String fileExtension, String timestamp) async {
     try {
       if (kDebugMode) {
@@ -900,6 +914,27 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       if (!hasPermission) {
         if (kDebugMode) {
           print('KDEBUG: 存储权限被拒绝');
+        }
+        
+        if (mounted) {
+          _showGlassDialog(
+            title: const Text(
+              '权限不足',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: const Text('需要存储权限才能保存文件'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('确定'),
+              ),
+            ],
+          );
         }
         return;
       }
@@ -931,15 +966,39 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         print('KDEBUG: 文件已成功保存到: $downloadPath');
       }
       
-      Fluttertoast.showToast(
-        msg: '文件已保存到: $downloadPath',
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.BOTTOM,
-      );
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: '文件已保存到: $downloadPath',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
     } catch (e) {
       if (kDebugMode) {
-        print('KDEBUG: Android平台单文件保存失败: $e');
+        print('KDEBUG: 单文件保存失败: $e');
       }
+      
+      if (mounted) {
+        _showGlassDialog(
+          title: const Text(
+            '保存失败',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text('保存失败: $e'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('确定'),
+            ),
+          ],
+        );
+      }
+      
       rethrow;
     }
   }
@@ -1122,7 +1181,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           }
         }
       } else {
-        // 用户取消了保存操作
+        // 取消保存操作
         if (mounted) {
           Navigator.of(context).pop(); // 关闭进度对话框
           
@@ -1216,6 +1275,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   }
   
   /// Android平台的文件保存方法
+  /// [suggestedName] 建议的文件名
   Future<void> _saveFileForAndroid(String suggestedName) async {
     try {
       if (kDebugMode) {
@@ -1375,9 +1435,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       allowedExtensions: ['jpg', 'jpeg', 'png', 'bmp', 'gif'],
     );
     
-    // 检查用户是否选择了文件
+    // 检查是否选择了文件
     if (result == null || result.files.isEmpty) {
-      // 用户取消了选择
+      // 取消选择
       return;
     }
     
@@ -1391,7 +1451,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.BOTTOM,
       );
-      // 检查文件大小是否超过3MB
+      // 检查文件大小
       const int maxSize = 3 * 1024 * 1024; // 3MB in bytes
       if (imageData.length > maxSize) {
         // 显示文件过大的提示
@@ -1417,7 +1477,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         }
       }
       
-      // 更新当前封面图片
+      // 更新封面
       if (mounted) {
         setState(() {
           _currentCoverImage = imageData;
@@ -1432,7 +1492,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         print('KDEBUG: 选择新封面图片时出错: $e');
       }
       
-      // 显示错误消息给用户
+      // 显示错误消息
       if (mounted) {
         _showGlassDialog(
           title: const Text(
@@ -1456,7 +1516,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     }
   }
 
-  /// 构建封面部分
+  /// 封面
   Widget _buildCoverSection() {
     if (_currentCoverImage != null) {
       return Column(
@@ -1470,7 +1530,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 constraints: const BoxConstraints(maxWidth: 400),
                 child: Stack(
                   children: [
-                    // 液态玻璃背景效果
+                    // 液态玻璃
                     Positioned.fill(
                       child: LiquidGlassLayer(
                         settings: LiquidGlassSettings(
@@ -1529,7 +1589,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             constraints: const BoxConstraints(maxWidth: 400),
             child: Stack(
               children: [
-                // 液态玻璃背景效果
+                // 液态玻璃
                 Positioned.fill(
                   child: LiquidGlassLayer(
                     settings: GlassEffectConfig.baseSettings(level: effectLevel),
@@ -1572,13 +1632,13 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     }
   }
 
-  /// 构建表单字段列表
+  /// 构建列表
   List<Widget> _buildFormFields() {
     final bool isBatchMode = widget.additionalFiles != null && widget.additionalFiles!.isNotEmpty;
     
     List<Widget> fields = [];
     
-    // 只有在非批量模式下才显示文件名和扩展名编辑框
+    // 非批量模式下显示文件名和扩展名编辑框
     if (!isBatchMode) {
       fields.add(
         Row(
@@ -1603,19 +1663,19 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       );
       fields.add(const SizedBox(height: 16));
     } else {
-      // 在批量模式下显示文件列表
+      // 批量模式文件列表
       fields.add(_buildFileList());
       fields.add(const SizedBox(height: 16));
     }
     
-    // 标题单独一行（通常较长）
+    // 标题
     fields.add(_buildGlassTextFormField(
       controller: _titleController,
       labelText: '标题',
     ));
     fields.add(const SizedBox(height: 16));
     
-    // 艺术家和专辑放在同一行
+    // 艺术家和专辑
     fields.add(_buildGlassTextFormField(
       controller: _artistController,
       labelText: '艺术家',
@@ -1628,14 +1688,14 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     ));
     fields.add(const SizedBox(height: 16));
     
-    // 专辑艺术家单独一行
+    // 专辑艺术家
     fields.add(_buildGlassTextFormField(
       controller: _albumArtistController,
       labelText: '专辑艺术家',
     ));
     fields.add(const SizedBox(height: 16));
     
-    // 流派、BPM、年份放在同一行
+    // 流派、BPM、年份
     fields.add(
       Row(
         children: [
@@ -1669,7 +1729,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     );
     fields.add(const SizedBox(height: 16));
     
-    // 曲目号、曲目总数、光盘号放在同一行
+    // 曲目号、曲目总数、光盘号
     fields.add(
       Row(
         children: [
@@ -1704,7 +1764,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     );
     fields.add(const SizedBox(height: 16));
     
-    // 光盘总数和时长放在同一行
+    // 光盘总数和时长
     fields.add(
       Row(
         children: [
@@ -1742,14 +1802,14 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     return fields;
   }
 
-  /// 构建文件列表组件（使用文本输入框实现）
+  /// 文件列表（使用文本输入框实现）
   Widget _buildFileList() {
     final List<String> allFiles = [
       widget.filePath,
       if (widget.additionalFiles != null) ...widget.additionalFiles!
     ];
     
-    // 构建文件列表文本，每个文件名占一行
+    // 文件列表文本
     final StringBuffer buffer = StringBuffer();
     for (int i = 0; i < allFiles.length; i++) {
       String fileName = path.basenameWithoutExtension(allFiles[i]);
@@ -1769,12 +1829,12 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     // 创建一个文本控制器并设置文件列表文本
     final TextEditingController fileListController = TextEditingController(text: buffer.toString());
     
-    // 计算最大高度为屏幕高度的25%（比原来增加了10个百分点）
+    // 计算最大高度为屏幕高度的25%
     final double maxHeight = MediaQuery.of(context).size.height * 0.25;
     
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
-      margin: const EdgeInsets.all(4.0), // 与其他文本框统一外边距
+      margin: const EdgeInsets.all(4.0), 
       child: Stack(
         children: [
           // // 液态玻璃背景效果
@@ -1806,7 +1866,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           //     ),
           //   ),
           // ),
-          // 可滚动的文本区域（禁用编辑）
+          // 可滚动的文本区域
           Scrollbar(
             controller: _fileListScrollController,
             child: SingleChildScrollView(
@@ -1817,17 +1877,17 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 decoration: InputDecoration(
                   labelText: '\n文件列表',
                   // 设置输入框的各种边框样式
-                  // 默认边框：圆角12，无边框线
+                  // 默认边框
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.0),
                     borderSide: BorderSide.none,
                   ),
-                  // 启用状态下的边框：圆角12，无边框线
+                  // 启用状态下的边框
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.0),
                     borderSide: BorderSide.none,
                   ),
-                  // 获得焦点时的边框：圆角12，无边框线
+                  // 获得焦点时的边框
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.0),
                     borderSide: BorderSide.none,
@@ -1972,7 +2032,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     },
   ),
   // const SizedBox(height: 16),
-          // 左上角返回按钮 (移到最后确保在最顶层)
+          // 左上角返回按钮
           Positioned(
             top: MediaQuery.of(context).padding.top + 16, // 更靠近顶部
             left: 12.0,
@@ -2000,7 +2060,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           ),
           // 右上角操作按钮组
           Positioned(
-            top: MediaQuery.of(context).padding.top + 16, // 更靠近顶部
+            top: MediaQuery.of(context).padding.top + 16,
             right: 12.0,
             child: Row(
               mainAxisSize: MainAxisSize.min,
