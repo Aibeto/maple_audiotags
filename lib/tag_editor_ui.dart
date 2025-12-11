@@ -106,6 +106,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   
   /// 控制器用于编辑文件扩展名
   late TextEditingController _extensionController;
+  
+  /// 滚动控制器用于批量编辑模式下的文件列表
+  late ScrollController _fileListScrollController;
 
   /// 表单键，用于验证和保存表单
   final _formKey = GlobalKey<FormState>();
@@ -270,6 +273,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     String fileExtension = path.extension(widget.filePath);
     _filenameController = TextEditingController(text: fileName);
     _extensionController = TextEditingController(text: fileExtension);
+    
+    // 初始化文件列表滚动控制器
+    _fileListScrollController = ScrollController();
     
     // 初始化封面图片
     // 批量编辑模式下默认不显示封面图片，除非所有文件的封面MD5一致
@@ -578,6 +584,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     _bpmController.dispose();
     _filenameController.dispose();
     _extensionController.dispose();
+    _fileListScrollController.dispose();
     _backgroundRotationController.dispose(); // 释放动画控制器
     // _refreshTimer?.cancel(); // 已移除定时器刷新
     super.dispose();
@@ -1762,69 +1769,80 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     // 创建一个文本控制器并设置文件列表文本
     final TextEditingController fileListController = TextEditingController(text: buffer.toString());
     
-    // 计算最大高度为屏幕高度的15%
-    final double maxHeight = MediaQuery.of(context).size.height * 0.15;
+    // 计算最大高度为屏幕高度的25%（比原来增加了10个百分点）
+    final double maxHeight = MediaQuery.of(context).size.height * 0.25;
     
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
       margin: const EdgeInsets.all(4.0), // 与其他文本框统一外边距
       child: Stack(
         children: [
-          // 液态玻璃背景效果
-          Positioned.fill(
-            child: LiquidGlassLayer(
-              settings: LiquidGlassSettings(
-                thickness: 6,
-                blur: 0.5,
-                lightAngle: 0.3 * pi,
-                lightIntensity: 0.7,
-                ambientStrength: 0.2,
-                blend: 0.5,
-                refractiveIndex: 1.2,
-                chromaticAberration: 0.2,
-                saturation: 1.05,
-              ),
-              child: LiquidGlass.inLayer(
-                shape: LiquidRoundedRectangle(
-                  borderRadius: const Radius.circular(12.0),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
+          // // 液态玻璃背景效果
+          // Positioned.fill(
+          //   child: LiquidGlassLayer(
+          //     settings: LiquidGlassSettings(
+          //       thickness: 6,
+          //       blur: 0.5,
+          //       lightAngle: 0.3 * pi,
+          //       lightIntensity: 0.7,
+          //       ambientStrength: 0.2,
+          //       blend: 0.5,
+          //       refractiveIndex: 1.2,
+          //       chromaticAberration: 0.2,
+          //       saturation: 1.05,
+          //     ),
+          //     child: LiquidGlass.inLayer(
+          //       shape: LiquidRoundedRectangle(
+          //         borderRadius: const Radius.circular(12.0),
+          //       ),
+          //       child: Container(
+          //         decoration: BoxDecoration(
+          //           borderRadius: BorderRadius.circular(12.0),
+          //           color: Theme.of(context).brightness == Brightness.dark
+          //               ? Colors.black.withOpacity(0.2)
+          //               : Colors.white.withOpacity(0.2),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // ),
+          // 可滚动的文本区域（禁用编辑）
+          Scrollbar(
+            controller: _fileListScrollController,
+            child: SingleChildScrollView(
+              controller: _fileListScrollController,
+              scrollDirection: Axis.vertical,
+              child: TextFormField(
+                controller: fileListController,
+                decoration: InputDecoration(
+                  labelText: '\n文件列表',
+                  // 设置输入框的各种边框样式
+                  // 默认边框：圆角12，无边框线
+                  border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.0),
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black.withOpacity(0.2)
-                        : Colors.white.withOpacity(0.2),
+                    borderSide: BorderSide.none,
                   ),
+                  // 启用状态下的边框：圆角12，无边框线
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  // 获得焦点时的边框：圆角12，无边框线
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                ),
+                maxLines: null, // 允许多行
+                enabled: false, // 禁用编辑
+                textAlign: TextAlign.start, // 文本左对齐
+                style: const TextStyle(
+                  fontFamily: 'SourceHanSans',
+                  fontSize: 14,
                 ),
               ),
-            ),
-          ),
-          // 文本输入框（禁用编辑）
-          TextFormField(
-            controller: fileListController,
-            decoration: InputDecoration(
-              labelText: '文件列表',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.0),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.0),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.0),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Colors.transparent,
-            ),
-            maxLines: null, // 允许多行
-            enabled: false, // 禁用编辑
-            textAlign: TextAlign.start, // 文本左对齐
-            style: const TextStyle(
-              fontFamily: 'SourceHanSans',
-              fontSize: 14,
             ),
           ),
         ],
