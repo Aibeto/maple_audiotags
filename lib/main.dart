@@ -1,7 +1,5 @@
 // 导入Flutter基础Material设计组件库
 // ignore_for_file: use_build_context_synchronously
-
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 // 导入动态颜色支持库，用于Android 12+的Monet取色功能
@@ -22,7 +20,8 @@ import 'package:path/path.dart' as path;
 import 'edit.dart';
 // 导入标签编辑UI
 import 'tag_editor_ui.dart';
-// 导入Toast库
+// 导入设置页面
+import 'settings_page.dart';
 
 // 导入日期格式化库
 
@@ -114,7 +113,7 @@ class _MyAppState extends State<MyApp> {
         ThemeMode themeMode = _isDarkMode == null
             // 如果为null，则使用系统主题模式
             ? ThemeMode.system
-            // 否则根据布尔值选择暗色或亮色模式
+            // 否则使用用户选择的主题模式
             : (_isDarkMode! ? ThemeMode.dark : ThemeMode.light);
         
         // 返回MaterialApp组件，这是Flutter应用的基础组件
@@ -131,7 +130,7 @@ class _MyAppState extends State<MyApp> {
             colorScheme: lightDynamic ??
                 // 如果系统不支持动态颜色，则使用蓝色种子颜色生成
                 ColorScheme.fromSeed(
-                  // 种子颜色为蓝色
+                  // 种子颜色
                   seedColor: Colors.blue,
                   // 亮度设置为亮色
                   brightness: Brightness.light,
@@ -150,11 +149,11 @@ class _MyAppState extends State<MyApp> {
                   // 亮度设置为暗色
                   brightness: Brightness.dark,
                 ),
-            // 脚手架背景颜色设置为黑色
+            // 背景颜色设置为黑色
             scaffoldBackgroundColor: Colors.black,
           ),
           // 设置主页
-          home: MyHomePage(
+          home: HomePage(
             // 页面标题
             title: '音乐标签编辑',
             // 当前暗色模式设置
@@ -169,9 +168,9 @@ class _MyAppState extends State<MyApp> {
 }
 
 // 音频标签编辑器主页类，继承自StatefulWidget表示有状态组件
-class MyHomePage extends StatefulWidget {
+class HomePage extends StatefulWidget {
   // 构造函数，接收必需的参数
-  const MyHomePage({
+  const HomePage({
     super.key, 
     required this.title,
     required this.isDarkMode,
@@ -187,11 +186,11 @@ class MyHomePage extends StatefulWidget {
 
   // 创建对应的状态类
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
 // 音频标签编辑器主页状态管理类，继承自State
-class _MyHomePageState extends State<MyHomePage> {
+class _HomePageState extends State<HomePage> {
   // 创建与原生通信的MethodChannel
   Uint8List? _backgroundImageBytes;
 
@@ -322,7 +321,7 @@ class _MyHomePageState extends State<MyHomePage> {
         return;
       }
       
-      // 限制最多处理100个文件，避免内存问题
+      // 限制最多处理100个文件
       if (result.files.length > 100) {
         if (mounted) {
           showDialog(
@@ -349,7 +348,7 @@ class _MyHomePageState extends State<MyHomePage> {
       // 转换为PlatformFile列表
       List<PlatformFile> selectedFiles = result.files.toList();
       
-      // 根据选择的文件数量决定进入哪种编辑模式
+      // 根据选择的文件数量决定编辑模式
       if (selectedFiles.length == 1) {
         // 单个文件，进入正常编辑模式
         await _processSingleFile(selectedFiles.first);
@@ -702,7 +701,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Center(
             // 居中布局组件
             child: Column(
-              // 主轴居中对齐
+              // 居中对齐
               mainAxisAlignment: MainAxisAlignment.center,
               // 子组件列表
               children: <Widget>[
@@ -715,7 +714,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  '选择一个音频文件开始编辑标签',
+                  '选择音频文件开始编辑标签',
                   style: TextStyle(
                     fontSize: 18,
                     color: Theme.of(context).brightness == Brightness.dark 
@@ -774,6 +773,7 @@ class _MyHomePageState extends State<MyHomePage> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                
                 // 主题切换按钮
                 LiquidGlassLayer(
                   settings: LiquidGlassSettings(
@@ -808,7 +808,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                 widget.isDarkMode == null
                                     // 如果为null，显示自动模式图标
                                     ? Icons.auto_mode
-                                    // 否则根据布尔值显示暗色或亮色模式图标
+                                    // 否则显示暗色或亮色模式图标
                                     : (widget.isDarkMode! ? Icons.dark_mode : Icons.light_mode),
                               ),
                               const SizedBox(width: 6),
@@ -824,47 +824,55 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-                // const SizedBox(width: 8),
-                // // 批量编辑功能按钮（保留但与上面的按钮功能一样）
-                // LiquidGlassLayer(
-                //   settings: LiquidGlassSettings(
-                //     thickness: 12,
-                //     blur: 1.5,
-                //     lightAngle: 0.3 * pi,
-                //     lightIntensity: 1.2,
-                //     ambientStrength: 0.4,
-                //     blend: 0.7,
-                //     refractiveIndex: 1.6,
-                //     chromaticAberration: 0.4,
-                //     saturation: 1.2,
-                //   ),
-                //   child: LiquidGlass.inLayer(
-                //     shape: LiquidRoundedRectangle(
-                //       borderRadius: const Radius.circular(20.0),
-                //     ),
-                //     child: Container(
-                //       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                //       decoration: BoxDecoration(
-                //         borderRadius: BorderRadius.circular(20.0),
-                //       ),
-                //       child: Material(
-                //         color: Colors.transparent,
-                //         child: InkWell(
-                //           onTap: _selectMusicFile, // 修改为使用相同的文件选择方法
-                //           borderRadius: BorderRadius.circular(20.0),
-                //           child: const Row(
-                //             mainAxisSize: MainAxisSize.min,
-                //             children: [
-                //               Icon(Icons.menu),
-                //               SizedBox(width: 6),
-                //               Text('批量编辑'),
-                //             ],
-                //           ),
-                //         ),
-                //       ),
-                //     ),
-                //   ),
-                // ),
+                const SizedBox(width: 16),
+                // 设置按钮
+                LiquidGlassLayer(
+                  settings: LiquidGlassSettings(
+                    thickness: 12,
+                    blur: 1.5,
+                    lightAngle: 0.3 * pi,
+                    lightIntensity: 1.2,
+                    ambientStrength: 0.4,
+                    blend: 0.7,
+                    refractiveIndex: 1.6,
+                    chromaticAberration: 0.4,
+                    saturation: 1.2,
+                  ),
+                  child: LiquidGlass.inLayer(
+                    shape: LiquidRoundedRectangle(
+                      borderRadius: const Radius.circular(20.0),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SettingsPage(),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(20.0),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.settings),
+                              SizedBox(width: 6),
+                              Text('设置'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
               ],
             ),
           ),

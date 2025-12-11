@@ -1450,6 +1450,302 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     }
   }
 
+  /// 构建封面部分
+  Widget _buildCoverSection() {
+    if (_currentCoverImage != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: GestureDetector(
+              onTap: _selectNewCoverImage,
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.5,
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Stack(
+                  children: [
+                    // 液态玻璃背景效果
+                    Positioned.fill(
+                      child: LiquidGlassLayer(
+                        settings: LiquidGlassSettings(
+                          thickness: 6,
+                          blur: 0.5,
+                          lightAngle: 0.3 * pi,
+                          lightIntensity: 0.7,
+                          ambientStrength: 0.2,
+                          blend: 0.5,
+                          refractiveIndex: 1.2,
+                          chromaticAberration: 0.2,
+                          saturation: 1.05,
+                        ),
+                        child: LiquidGlass.inLayer(
+                          shape: LiquidRoundedRectangle(
+                            borderRadius: const Radius.circular(12.0),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12.0),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.black.withOpacity(0.2)
+                                  : Colors.white.withOpacity(0.2),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12.0),
+                        child: Image.memory(
+                          _currentCoverImage!,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      );
+    } else {
+      return Center(
+        child: GestureDetector(
+          onTap: _selectNewCoverImage,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.5,
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Stack(
+              children: [
+                // 液态玻璃背景效果
+                Positioned.fill(
+                  child: LiquidGlassLayer(
+                    settings: LiquidGlassSettings(
+                      thickness: 6,
+                      blur: 0.5,
+                      lightAngle: 0.3 * pi,
+                      lightIntensity: 0.7,
+                      ambientStrength: 0.2,
+                      blend: 0.5,
+                      refractiveIndex: 1.2,
+                      chromaticAberration: 0.2,
+                      saturation: 1.05,
+                    ),
+                    child: LiquidGlass.inLayer(
+                      shape: LiquidRoundedRectangle(
+                        borderRadius: const Radius.circular(12.0),
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12.0),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.black.withOpacity(0.2)
+                              : Colors.white.withOpacity(0.2),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
+                        Text('点击添加封面图片', style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  /// 构建表单字段列表
+  List<Widget> _buildFormFields() {
+    final bool isBatchMode = widget.additionalFiles != null && widget.additionalFiles!.isNotEmpty;
+    
+    List<Widget> fields = [];
+    
+    // 只有在非批量模式下才显示文件名和扩展名编辑框
+    if (!isBatchMode) {
+      fields.add(
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: _buildGlassTextFormField(
+                controller: _filenameController,
+                labelText: '文件名',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 1,
+              child: _buildGlassTextFormField(
+                controller: _extensionController,
+                labelText: '后缀',
+              ),
+            ),
+          ],
+        ),
+      );
+      fields.add(const SizedBox(height: 16));
+    } else {
+      // 在批量模式下显示文件列表
+      fields.add(_buildFileList());
+      fields.add(const SizedBox(height: 16));
+    }
+    
+    // 标题单独一行（通常较长）
+    fields.add(_buildGlassTextFormField(
+      controller: _titleController,
+      labelText: '标题',
+    ));
+    fields.add(const SizedBox(height: 16));
+    
+    // 艺术家和专辑放在同一行
+    fields.add(_buildGlassTextFormField(
+      controller: _artistController,
+      labelText: '艺术家',
+    ));
+    fields.add(const SizedBox(height: 16));
+    
+    fields.add(_buildGlassTextFormField(
+      controller: _albumController,
+      labelText: '专辑',
+    ));
+    fields.add(const SizedBox(height: 16));
+    
+    // 专辑艺术家单独一行
+    fields.add(_buildGlassTextFormField(
+      controller: _albumArtistController,
+      labelText: '专辑艺术家',
+    ));
+    fields.add(const SizedBox(height: 16));
+    
+    // 流派、BPM、年份放在同一行
+    fields.add(
+      Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: _buildGlassTextFormField(
+              controller: _genreController,
+              labelText: '流派',
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 2,
+            child: _buildGlassTextFormField(
+              controller: _bpmController,
+              labelText: 'BPM',
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 2,
+            child: _buildGlassTextFormField(
+              controller: _yearController,
+              labelText: '年份',
+              keyboardType: TextInputType.number,
+            ),
+          ),
+        ],
+      ),
+    );
+    fields.add(const SizedBox(height: 16));
+    
+    // 曲目号、曲目总数、光盘号放在同一行
+    fields.add(
+      Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: _buildGlassTextFormField(
+              controller: _trackNumberController,
+              labelText: '曲目号',
+              keyboardType: TextInputType.number,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 2,
+            child: _buildGlassTextFormField(
+              controller: _trackTotalController,
+              labelText: '曲目数',
+              keyboardType: TextInputType.number,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 2,
+            child: _buildGlassTextFormField(
+              controller: _discNumberController,
+              labelText: '光盘号',
+              keyboardType: TextInputType.number,
+            ),
+          ),
+        ],
+      ),
+    );
+    fields.add(const SizedBox(height: 16));
+    
+    // 光盘总数和时长放在同一行
+    fields.add(
+      Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: _buildGlassTextFormField(
+              controller: _discTotalController,
+              labelText: '光盘数',
+              keyboardType: TextInputType.number,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 3,
+            child: _buildGlassTextFormField(
+              controller: _durationController,
+              labelText: '时长(秒)',
+              keyboardType: TextInputType.number,
+              enabled: false, // 持续时间不能编辑
+            ),
+          ),
+        ],
+      ),
+    );
+    fields.add(const SizedBox(height: 16));
+    
+    fields.add(
+      SizedBox(
+        height: MediaQuery.of(context).size.height * 0.75,
+        child: _buildGlassLyricsFormField(),
+      ),
+    );
+    fields.add(const SizedBox(height: 24));
+    
+    return fields;
+  }
+
   /// 构建文件列表组件（使用文本输入框实现）
   Widget _buildFileList() {
     final List<String> allFiles = [
@@ -1548,7 +1844,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final bool isBatchMode = widget.additionalFiles != null && widget.additionalFiles!.isNotEmpty;
+    final Size screenSize = MediaQuery.of(context).size;
+    final bool isLandscape = screenSize.width > screenSize.height;
     
     return Scaffold(
       body: Stack(
@@ -1601,320 +1898,70 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       ),
     ),
   // 内容层 - 表单等UI元素
-  SingleChildScrollView(
-    padding: const EdgeInsets.all(16.0),
-    child: Form(
-      key: _formKey,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            // 添加间距避让状态栏
-            children: [
-              SizedBox(height: MediaQuery.of(context).padding.top),
-              // 添加一个占位符，用于使内容层与状态栏之间的间距保持一致
-              const SizedBox(height: 30),
-              const SizedBox(height: 16),
-              // 封面图片显示区域
-              // 检查是否有封面图片数据，如果有则显示图片，否则显示添加图片的占位符
-              if (_currentCoverImage != null)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+  LayoutBuilder(
+    builder: (context, constraints) {
+      if (isLandscape) {
+        // 横屏模式：左侧封面，右侧表单
+        return Row(
+        
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(width: 64),
+            // 固定封面部分（不滚动）
+            SizedBox(
+              width: constraints.maxWidth * 0.35,
+              child: SingleChildScrollView(
+                child: Column(
                   children: [
-                    Center(
-                      child: GestureDetector(
-                        onTap: _selectNewCoverImage,
-                        child: Container(
-                          width: MediaQuery.of(context).size.width * 0.5,
-                          constraints: const BoxConstraints(maxWidth: 400),
-                          child: Stack(
-                            children: [
-                              // 液态玻璃背景效果
-                              Positioned.fill(
-                                child: LiquidGlassLayer(
-                                  settings: LiquidGlassSettings(
-                                    thickness: 6,
-                                    blur: 0.5,
-                                    lightAngle: 0.3 * pi,
-                                    lightIntensity: 0.7,
-                                    ambientStrength: 0.2,
-                                    blend: 0.5,
-                                    refractiveIndex: 1.2,
-                                    chromaticAberration: 0.2,
-                                    saturation: 1.05,
-                                  ),
-                                  child: LiquidGlass.inLayer(
-                                    shape: LiquidRoundedRectangle(
-                                      borderRadius: const Radius.circular(12.0),
-                                    ),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12.0),
-                                        color: Theme.of(context).brightness == Brightness.dark
-                                            ? Colors.black.withOpacity(0.2)
-                                            : Colors.white.withOpacity(0.2),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey),
-                                  borderRadius: BorderRadius.circular(12.0),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12.0),
-                                  child: Image.memory(
-                                    _currentCoverImage!,
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: MediaQuery.of(context).padding.top),
+                    const SizedBox(height: 64),
+                    _buildCoverSection(), // 封面部分独立出来
                   ],
-                )
-              else
-                Center(
-                  child: GestureDetector(
-                    onTap: _selectNewCoverImage,
-                    child: Container(
-                      width: MediaQuery.of(context).size.width * 0.5,
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      child: Stack(
-                        children: [
-                          // 液态玻璃背景效果
-                          Positioned.fill(
-                            child: LiquidGlassLayer(
-                              settings: LiquidGlassSettings(
-                                thickness: 6,
-                                blur: 0.5,
-                                lightAngle: 0.3 * pi,
-                                lightIntensity: 0.7,
-                                ambientStrength: 0.2,
-                                blend: 0.5,
-                                refractiveIndex: 1.2,
-                                chromaticAberration: 0.2,
-                                saturation: 1.05,
-                              ),
-                              child: LiquidGlass.inLayer(
-                                shape: LiquidRoundedRectangle(
-                                  borderRadius: const Radius.circular(12.0),
-                                ),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12.0),
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.black.withOpacity(0.2)
-                                        : Colors.white.withOpacity(0.2),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(12.0),
-                            ),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
-                                  Text('点击添加封面图片', style: TextStyle(color: Colors.grey)),
-                                ],
-                                // const SizedBox(height: 16),
-                              ),
-                            ),
-                          
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
+                ),
+              ),
+            ),
+            // 可滚动的表单部分
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(64.0),
+                child: Form(
+                  key: _formKey,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: _buildFormFields(), // 表单字段独立出来
                     ),
                   ),
                 ),
-              // 只有在非批量模式下才显示文件名和扩展名编辑框
-              if (!isBatchMode) ...[
-                // _buildGlassTextFormField(
-                //   controller: _filenameController,
-                //   labelText: '文件名',
-                // ),
-                // const SizedBox(height: 16),
-                // _buildGlassTextFormField(
-                //   controller: _extensionController,
-                //   labelText: '后缀',
-                // ),
-                Row(
+              ),
+            ),
+          ],
+        );
+      } else {
+        // 竖屏模式：保持原有布局
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 3,
-                      child: _buildGlassTextFormField(
-                        controller: _filenameController,
-                        labelText: '文件名',
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 1,
-                      child: _buildGlassTextFormField(
-                        controller: _extensionController,
-                        labelText: '后缀',
-                      ),
-                    ),
+                    SizedBox(height: MediaQuery.of(context).padding.top),
+                    const SizedBox(height: 30),
+                    _buildCoverSection(), // 封面部分
+                    ..._buildFormFields(), // 表单字段
                   ],
-                )
-              // const SizedBox(height: 16),
-              ] else
-              
-                // 在批量模式下显示文件列表
-                _buildFileList(),
-                const SizedBox(height: 16),
-              // 标题单独一行（通常较长）
-              _buildGlassTextFormField(
-                controller: _titleController,
-                labelText: '标题',
+                ),
               ),
-              const SizedBox(height: 16),
-              // 艺术家和专辑放在同一行
-              // Row(
-                // children: [
-                  // Expanded(
-                    // flex: 3,
-              _buildGlassTextFormField(
-                controller: _artistController,
-                labelText: '艺术家',
-              ),
-                  // ),
-              const SizedBox(height: 16),
-                  // Expanded(
-                    // flex: 4,
-              _buildGlassTextFormField(
-                controller: _albumController,
-                labelText: '专辑',
-              ),
-                  // ),
-                // ],
-              // ),
-              const SizedBox(height: 16),
-              // 专辑艺术家单独一行
-              _buildGlassTextFormField(
-                controller: _albumArtistController,
-                labelText: '专辑艺术家',
-              ),
-              const SizedBox(height: 16),
-              // 流派、BPM、年份放在同一行
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: _buildGlassTextFormField(
-                      controller: _genreController,
-                      labelText: '流派',
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: _buildGlassTextFormField(
-                      controller: _bpmController,
-                      labelText: 'BPM',
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: _buildGlassTextFormField(
-                      controller: _yearController,
-                      labelText: '年份',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // 曲目号、曲目总数、光盘号放在同一行
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: _buildGlassTextFormField(
-                      controller: _trackNumberController,
-                      labelText: '曲目号',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: _buildGlassTextFormField(
-                      controller: _trackTotalController,
-                      labelText: '曲目数',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: _buildGlassTextFormField(
-                      controller: _discNumberController,
-                      labelText: '光盘号',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // 光盘总数和时长放在同一行
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: _buildGlassTextFormField(
-                      controller: _discTotalController,
-                      labelText: '光盘数',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 3,
-                    child: _buildGlassTextFormField(
-                      controller: _durationController,
-                      labelText: '时长(秒)',
-                      keyboardType: TextInputType.number,
-                      enabled: false, // 持续时间不能编辑
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.75,
-                child: _buildGlassLyricsFormField(),
-              ),
-              const SizedBox(height: 24),
-              // const SizedBox(height: 16),
-              // Center(
-              //   child: ElevatedButton.icon(
-              //     onPressed: _saveTags,
-              //     icon: const Icon(Icons.save),
-              //     label: const Text('保存标签'),
-              //   ),
-              // ),
-            ],
+            ),
           ),
-        ),
-      ),
-    ),
+        );
+      }
+    },
   ),
   // const SizedBox(height: 16),
           // 左上角返回按钮 (移到最后确保在最顶层)
