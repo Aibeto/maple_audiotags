@@ -11,22 +11,22 @@ class GlassEffectConfig {
     switch (level) {
       case EffectLevel.low:
         return LiquidGlassSettings(
-          thickness: 3,  // 降低厚度
-          blur: 0.2,     // 降低模糊度
-          lightAngle: 0.2 * pi,
-          lightIntensity: 0.3,  // 降低光强
-          ambientStrength: 0.05, // 降低环境光强度
-          blend: 0.2,    // 降低混合度
-          refractiveIndex: 1.05, // 降低折射率
-          chromaticAberration: 0.05, // 降低色差
+          thickness: 1,  // 最小厚度
+          blur: 0.5,     // 保留模糊度
+          lightAngle: 0.0, // 关闭光源角度
+          lightIntensity: 0.0,  // 关闭光强
+          ambientStrength: 0.0, // 关闭环境光强度
+          blend: 0.0,    // 关闭混合
+          refractiveIndex: 1.0, // 最小折射率
+          chromaticAberration: 0.0, // 关闭色差
           saturation: 1.0,
         );
       case EffectLevel.medium:
         return LiquidGlassSettings(
-          thickness: 4,  // 降低厚度
-          blur: 0.3,     // 降低模糊度
+          thickness: 6,  // 降低厚度
+          blur: 1.0,     // 增强模糊度
           lightAngle: 0.3 * pi,
-          lightIntensity: 0.5,  // 降低光强
+          lightIntensity: 0.4,  // 降低光强
           ambientStrength: 0.1,  // 降低环境光强度
           blend: 0.3,    // 降低混合度
           refractiveIndex: 1.1,  // 降低折射率
@@ -35,15 +35,15 @@ class GlassEffectConfig {
         );
       case EffectLevel.high:
         return LiquidGlassSettings(
-          thickness: 8,
-          blur: 0.8,
-          lightAngle: 0.4 * pi,
-          lightIntensity: 0.9,
-          ambientStrength: 0.3,
-          blend: 0.7,
-          refractiveIndex: 1.3,
-          chromaticAberration: 0.3,
-          saturation: 1.1,
+          thickness: 12, // 增加厚度
+          blur: 1.2,     // 增强模糊度
+          lightAngle: 0.45 * pi,
+          lightIntensity: 1.2,   // 增强光强
+          ambientStrength: 0.5,  // 增强环境光强度
+          blend: 0.9,            // 增强混合度
+          refractiveIndex: 1.5,  // 增强折射率
+          chromaticAberration: 0.5, // 增强色差
+          saturation: 1.2,
         );
     }
   }
@@ -52,22 +52,22 @@ class GlassEffectConfig {
     switch (level) {
       case EffectLevel.low:
         return LiquidGlassSettings(
-          thickness: 3,  // 降低厚度
-          blur: 0.3,     // 降低模糊度
-          lightAngle: 0.25 * pi,
-          lightIntensity: 0.3,  // 降低光强
-          ambientStrength: 0.08, // 降低环境光强度
-          blend: 0.15,   // 降低混合度
-          refractiveIndex: 1.1,  // 降低折射率
-          chromaticAberration: 0.08, // 降低色差
-          saturation: 1.02,
+          thickness: 1,  // 最小厚度
+          blur: 0.6,     // 保留模糊度
+          lightAngle: 0.0, // 关闭光源角度
+          lightIntensity: 0.0,  // 关闭光强
+          ambientStrength: 0.0, // 关闭环境光强度
+          blend: 0.0,    // 关闭混合
+          refractiveIndex: 1.0, // 最小折射率
+          chromaticAberration: 0.0, // 关闭色差
+          saturation: 1.0,
         );
       case EffectLevel.medium:
         return LiquidGlassSettings(
-          thickness: 4,  // 降低厚度
-          blur: 0.5,     // 降低模糊度
+          thickness: 6,  // 降低厚度
+          blur: 1.1,     // 增强模糊度
           lightAngle: 0.3 * pi,
-          lightIntensity: 0.4,  // 降低光强
+          lightIntensity: 0.3,  // 降低光强
           ambientStrength: 0.12, // 降低环境光强度
           blend: 0.2,    // 降低混合度
           refractiveIndex: 1.15, // 降低折射率
@@ -76,15 +76,15 @@ class GlassEffectConfig {
         );
       case EffectLevel.high:
         return LiquidGlassSettings(
-          thickness: 7,
-          blur: 1.0,
-          lightAngle: 0.35 * pi,
-          lightIntensity: 0.7,
-          ambientStrength: 0.25,
-          blend: 0.35,
-          refractiveIndex: 1.4,
-          chromaticAberration: 0.25,
-          saturation: 1.15,
+          thickness: 9,         // 增加厚度
+          blur: 1.3,            // 增强模糊度
+          lightAngle: 0.4 * pi,
+          lightIntensity: 1.0,  // 增强光强
+          ambientStrength: 0.4, // 增强环境光强度
+          blend: 0.6,           // 增强混合度
+          refractiveIndex: 1.5, // 增强折射率
+          chromaticAberration: 0.4, // 增强色差
+          saturation: 1.25,
         );
     }
   }
@@ -93,22 +93,22 @@ class GlassEffectConfig {
     switch (level) {
       case EffectLevel.low:
         return LiquidGlassSettings(
-          thickness: 4,  // 降低厚度
-          blur: 0.2,     // 降低模糊度
-          lightAngle: 0.3 * pi,
-          lightIntensity: 0.4,  // 降低光强
-          ambientStrength: 0.08, // 降低环境光强度
-          blend: 0.2,    // 降低混合度
-          refractiveIndex: 1.1,  // 降低折射率
-          chromaticAberration: 0.08, // 降低色差
-          saturation: 1.01,
+          thickness: 1,  // 最小厚度
+          blur: 0.5,     // 保留模糊度
+          lightAngle: 0.0, // 关闭光源角度
+          lightIntensity: 0.0,  // 关闭光强
+          ambientStrength: 0.0, // 关闭环境光强度
+          blend: 0.0,    // 关闭混合
+          refractiveIndex: 1.0, // 最小折射率
+          chromaticAberration: 0.0, // 关闭色差
+          saturation: 1.0,
         );
       case EffectLevel.medium:
         return LiquidGlassSettings(
-          thickness: 5,  // 降低厚度
-          blur: 0.4,     // 降低模糊度
+          thickness: 6,  // 降低厚度
+          blur: 1.2,     // 增强模糊度
           lightAngle: 0.35 * pi,
-          lightIntensity: 0.6,  // 降低光强
+          lightIntensity: 0.5,  // 降低光强
           ambientStrength: 0.15, // 降低环境光强度
           blend: 0.3,    // 降低混合度
           refractiveIndex: 1.15, // 降低折射率
@@ -117,15 +117,15 @@ class GlassEffectConfig {
         );
       case EffectLevel.high:
         return LiquidGlassSettings(
-          thickness: 10,
-          blur: 0.9,
-          lightAngle: 0.4 * pi,
-          lightIntensity: 0.95,
-          ambientStrength: 0.35,
-          blend: 0.75,
-          refractiveIndex: 1.35,
-          chromaticAberration: 0.35,
-          saturation: 1.12,
+          thickness: 15, // 增加厚度以更像iOS液态玻璃
+          blur: 1.5,     // 增强模糊度
+          lightAngle: 0.5 * pi,
+          lightIntensity: 1.5,   // 增强光强
+          ambientStrength: 0.7,  // 增强环境光强度
+          blend: 1.0,            // 最大混合度
+          refractiveIndex: 1.7,  // 增强折射率
+          chromaticAberration: 0.7, // 增强色差
+          saturation: 1.3,
         );
     }
   }
@@ -134,22 +134,22 @@ class GlassEffectConfig {
     switch (level) {
       case EffectLevel.low:
         return LiquidGlassSettings(
-          thickness: 3,  // 降低厚度
-          blur: 0.15,    // 降低模糊度
-          lightAngle: 0.28 * pi,
-          lightIntensity: 0.3,  // 降低光强
-          ambientStrength: 0.08, // 降低环境光强度
-          blend: 0.2,    // 降低混合度
-          refractiveIndex: 1.05, // 降低折射率
-          chromaticAberration: 0.08, // 降低色差
+          thickness: 1,  // 最小厚度
+          blur: 0.4,    // 保留模糊度
+          lightAngle: 0.0, // 关闭光源角度
+          lightIntensity: 0.0,  // 关闭光强
+          ambientStrength: 0.0, // 关闭环境光强度
+          blend: 0.0,    // 关闭混合
+          refractiveIndex: 1.0, // 最小折射率
+          chromaticAberration: 0.0, // 关闭色差
           saturation: 1.0,
         );
       case EffectLevel.medium:
         return LiquidGlassSettings(
-          thickness: 4,  // 降低厚度
-          blur: 0.3,     // 降低模糊度
+          thickness: 6,  // 降低厚度
+          blur: 0.9,     // 增强模糊度
           lightAngle: 0.32 * pi,
-          lightIntensity: 0.5,  // 降低光强
+          lightIntensity: 0.4,  // 降低光强
           ambientStrength: 0.12, // 降低环境光强度
           blend: 0.3,    // 降低混合度
           refractiveIndex: 1.1,  // 降低折射率
@@ -158,15 +158,15 @@ class GlassEffectConfig {
         );
       case EffectLevel.high:
         return LiquidGlassSettings(
-          thickness: 9,
-          blur: 0.85,
-          lightAngle: 0.37 * pi,
-          lightIntensity: 0.85,
-          ambientStrength: 0.28,
-          blend: 0.65,
-          refractiveIndex: 1.28,
-          chromaticAberration: 0.28,
-          saturation: 1.09,
+          thickness: 13, // 增加厚度
+          blur: 1.4,     // 增强模糊度
+          lightAngle: 0.45 * pi,
+          lightIntensity: 1.3,   // 增强光强
+          ambientStrength: 0.6,  // 增强环境光强度
+          blend: 0.9,            // 增强混合度
+          refractiveIndex: 1.6,  // 增强折射率
+          chromaticAberration: 0.6, // 增强色差
+          saturation: 1.25,
         );
     }
   }
@@ -175,22 +175,22 @@ class GlassEffectConfig {
     switch (level) {
       case EffectLevel.low:
         return LiquidGlassSettings(
-          thickness: 3,  // 降低厚度
-          blur: 0.15,    // 降低模糊度
-          lightAngle: 0.25 * pi,
-          lightIntensity: 0.3,  // 降低光强
-          ambientStrength: 0.08, // 降低环境光强度
-          blend: 0.2,    // 降低混合度
-          refractiveIndex: 1.05, // 降低折射率
-          chromaticAberration: 0.08, // 降低色差
+          thickness: 1,  // 最小厚度
+          blur: 0.4,    // 保留模糊度
+          lightAngle: 0.0, // 关闭光源角度
+          lightIntensity: 0.0,  // 关闭光强
+          ambientStrength: 0.0, // 关闭环境光强度
+          blend: 0.0,    // 关闭混合
+          refractiveIndex: 1.0, // 最小折射率
+          chromaticAberration: 0.0, // 关闭色差
           saturation: 1.0,
         );
       case EffectLevel.medium:
         return LiquidGlassSettings(
-          thickness: 4,  // 降低厚度
-          blur: 0.2,     // 降低模糊度
+          thickness: 6,  // 降低厚度
+          blur: 0.8,     // 增强模糊度
           lightAngle: 0.28 * pi,
-          lightIntensity: 0.4,  // 降低光强
+          lightIntensity: 0.3,  // 降低光强
           ambientStrength: 0.12, // 降低环境光强度
           blend: 0.25,   // 降低混合度
           refractiveIndex: 1.1,  // 降低折射率
@@ -199,15 +199,15 @@ class GlassEffectConfig {
         );
       case EffectLevel.high:
         return LiquidGlassSettings(
-          thickness: 6,
-          blur: 0.55,
-          lightAngle: 0.31 * pi,
-          lightIntensity: 0.75,
-          ambientStrength: 0.23,
-          blend: 0.55,
-          refractiveIndex: 1.2,
-          chromaticAberration: 0.23,
-          saturation: 1.07,
+          thickness: 11, // 增加厚度
+          blur: 1.1,     // 增强模糊度
+          lightAngle: 0.35 * pi,
+          lightIntensity: 1.1,   // 增强光强
+          ambientStrength: 0.5,  // 增强环境光强度
+          blend: 0.8,            // 增强混合度
+          refractiveIndex: 1.5,  // 增强折射率
+          chromaticAberration: 0.5, // 增强色差
+          saturation: 1.2,
         );
     }
   }

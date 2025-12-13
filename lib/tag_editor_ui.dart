@@ -1665,7 +1665,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             child: GestureDetector(
               onTap: _selectNewCoverImage,
               child: Container(
-                width: MediaQuery.of(context).size.width * 0.5,
+                width: MediaQuery.of(context).size.width * 0.75,
                 constraints: const BoxConstraints(maxWidth: 400),
                 child: Stack(
                   children: [
@@ -2159,7 +2159,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           if (_currentCoverImage != null)
     Positioned.fill(
       child: RotationTransition(
-        turns: _backgroundRotationAnimation,
+        turns: effectLevel != EffectLevel.low ? _backgroundRotationAnimation : const AlwaysStoppedAnimation(0.0),
         child: Container(
           alignment: Alignment.center,
           child: Transform.scale(
@@ -2256,7 +2256,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(height: MediaQuery.of(context).padding.top),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 48),
                     _buildCoverSection(), // 封面部分
                     ..._buildFormFields(), // 表单字段
                   ],
