@@ -40,6 +40,8 @@ import 'package:path_provider/path_provider.dart';
 // 导入桌面拖放库
 import 'package:desktop_drop/desktop_drop.dart';
 
+// Web平台文件处理
+
 // 程序入口点，使用async关键字支持异步操作
 Future<void> _clearCacheDirectory() async {
   try {
@@ -66,8 +68,16 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // 如果是Android系统，清理缓存目录
-  if (Platform.isAndroid) {
-    await _clearCacheDirectory();
+  // 在Web平台上，Platform.isAndroid会抛出异常，所以我们需要捕获它
+  try {
+    if (Platform.isAndroid) {
+      await _clearCacheDirectory();
+    }
+  } catch (e) {
+    // 在Web平台上忽略该错误
+    if (kDebugMode) {
+      print('KDEBUG: Platform.isAndroid 不支持在Web上运行: $e');
+    }
   }
   
   // 获取共享偏好设置实例，用于读取和保存用户设置
