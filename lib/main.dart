@@ -1100,7 +1100,7 @@ class _HomePageState extends State<HomePage> {
         print('处理拖拽文件时出错: $e');
       }
 
-      // 显示错误消息给用户
+      // 显示错误消息
       if (mounted) {
         showDialog(
           context: context,
