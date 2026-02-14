@@ -24,9 +24,7 @@ class WebFileHandler {
     } catch (_) {}
     _input.click();
 
-    html.Event? ev;
     try {
-      ev = await _input.onChange.first.timeout(const Duration(minutes: 5));
     } on TimeoutException {
       return;
     }

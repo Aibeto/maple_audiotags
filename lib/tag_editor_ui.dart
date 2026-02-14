@@ -142,18 +142,12 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
   
   /// 当前封面图片数据
   Uint8List? _currentCoverImage;
-  /// Web平台当前文件数据
-  WebFileData? _currentWebFile;
-  /// Web平台附加文件数据
-  List<WebFileData>? _additionalWebFiles;
   /// MD5 校验进度（0.0 - 1.0），用于在封面下方显示
   ValueNotifier<double>? _md5ProgressNotifier;
   /// MD5 校验是否正在进行
   bool _isMd5Checking = false;
   /// MD5 校验结果是否不一致（用于常驻显示不一致状态）
   bool _md5Mismatch = false;
-  /// MD5 校验取消标志（可由封面下方的取消按钮触发）
-  ValueNotifier<bool>? _md5CancelledNotifier;
   
   /// 背景图片旋转动画控制器
   late AnimationController _backgroundRotationController;
@@ -189,8 +183,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12.0),
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black.withOpacity(0.2)
-                        : Colors.white.withOpacity(0.2),
+                        ? Colors.black.withAlpha(0.2 as int)
+                        : Colors.white.withAlpha(0.2 as int),
                   ),
                 ),
               ),
@@ -245,8 +239,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12.0),
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black.withOpacity(0.2)
-                        : Colors.white.withOpacity(0.2),
+                        ? Colors.black.withAlpha(50)
+                        : Colors.white.withAlpha(50),
                   ),
                 ),
               ),
@@ -291,8 +285,6 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     _loadEffectLevel();
     
     // 初始化Web平台特有变量
-    _currentWebFile = widget.webFileData;
-    _additionalWebFiles = widget.additionalWebFiles;
     
     // 初始化控制器并设置初始值
     _titleController = TextEditingController(text: widget.tag.title);
@@ -441,7 +433,6 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       // 在封面区域显示进度（不再使用对话框）
       setState(() {
         _md5ProgressNotifier = md5Progress;
-        _md5CancelledNotifier = md5Cancelled;
         _isMd5Checking = true;
         _md5Mismatch = false;
       });
@@ -481,7 +472,6 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       setState(() {
         _isMd5Checking = false;
         _md5ProgressNotifier = null;
-        _md5CancelledNotifier = null;
         // 取消视为不一致，非取消且一致则隐藏不一致提示
         _md5Mismatch = wasCancelled ? true : !allCoversSame;
         if (allCoversSame) {
@@ -519,7 +509,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20.0),
-              color: Theme.of(context).dialogBackgroundColor.withOpacity(0.9),
+              color: Theme.of(context).colorScheme.surface.withAlpha(220),
             ),
             padding: const EdgeInsets.all(24.0),
             width: (() {
@@ -542,7 +532,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                       color: Theme.of(context).textTheme.titleLarge?.color,
                       shadows: [
                         Shadow(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withAlpha(75),
                           blurRadius: 4,
                           offset: const Offset(1, 1),
                         )
@@ -578,7 +568,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                       height: 1.5,
                       shadows: [
                         Shadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withAlpha(50),
                           blurRadius: 2,
                           offset: const Offset(0.5, 0.5),
                         )
@@ -716,7 +706,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
             TextButton(
               onPressed: () {
                 saveCancelled.value = true;
-                try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+                if (mounted) {
+                  try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+                }
               },
               child: const Text('取消'),
             ),
@@ -735,7 +727,9 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         }
         // 确保进度完成并关闭对话框
         saveProgress.value = 1.0;
-        try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+        if (mounted) {
+          try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+        }
       } on PlatformException catch (e) {
         // 关闭进度对话框
         if (mounted) {
@@ -1742,8 +1736,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12.0),
                               color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.black.withOpacity(0.2)
-                                  : Colors.white.withOpacity(0.2),
+                                  ? Colors.black.withAlpha(50)
+                                  : Colors.white.withAlpha(50),
                             ),
                           ),
                         ),
@@ -1837,8 +1831,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12.0),
                               color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.black.withOpacity(0.2)
-                                  : Colors.white.withOpacity(0.2),
+                                  ? Colors.black.withAlpha(50)
+                                  : Colors.white.withAlpha(50),
                             ),
                           ),
                         ),
@@ -2222,8 +2216,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                   fit: BoxFit.contain,
                   colorFilter: ColorFilter.mode(
                     Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black.withOpacity(0.05)
-                        : Colors.white.withOpacity(0.05),
+                        ? Colors.black.withAlpha(15)
+                        : Colors.white.withAlpha(15),
                     BlendMode.srcOver,
                   ),
                 ),
@@ -2245,8 +2239,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
               filter: ui.ImageFilter.blur(sigmaX: 25.0, sigmaY: 25.0), // 增大十倍模糊半径
               child: Container(
                 color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black.withOpacity(0.30)
-                    : Colors.white.withOpacity(0.25), // 使用与背景图片相同的颜色过滤器
+                    ? Colors.black.withAlpha(75)
+                    : Colors.white.withAlpha(64), // 使用与背景图片相同的颜色过滤器
               ),
             ),
           ),
