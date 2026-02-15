@@ -344,10 +344,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       
       // 读取所有文件的标签
       List<Tag?> tags = [];
-
-
-      if (false) {
-      } else {
+      
         for (String filePath in allFiles) {
           if (kDebugMode) {
             print('KDEBUG: 正在读取文件标签: $filePath');
@@ -355,7 +352,6 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           final tag = await AudioTags.read(filePath);
           tags.add(tag);
         }
-      }
       
       if (kDebugMode) {
         print('KDEBUG: 成功读取 ${tags.length} 个标签');
