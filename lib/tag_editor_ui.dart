@@ -20,31 +20,6 @@ import 'package:crypto/crypto.dart'; // 添加用于计算MD5哈希值
 // 导入 isolate 工具
 import 'isolate_utils.dart';
 
-// Web平台特有导入
-// Web helper
-
-// Web平台文件数据类
-class WebFileData {
-  final String name;
-  final Uint8List bytes;
-  final String mimeType;
-
-  WebFileData({
-    required this.name,
-    required this.bytes,
-    required this.mimeType,
-  });
-}
-
-// 在 Web 环境下安全地处理字节解析：如果没有实现解析器则返回 null（避免编译错误）
-Future<Tag?> parseTagsFromBytesForWeb(Uint8List bytes) async {
-  if (kDebugMode) {
-    print('KDEBUG: parseTagsFromBytesForWeb: not implemented for web; returning null');
-  }
-  
-  return null;
-}
-
 /// 音频标签编辑UI组件
 /// 提供一个表单界面用于查看和编辑音频文件的标签信息
 class TagEditorUI extends StatefulWidget {
@@ -59,8 +34,6 @@ class TagEditorUI extends StatefulWidget {
     required this.filePath,
     this.realFilePath,
     this.additionalFiles,
-    this.webFileData,
-    this.additionalWebFiles,
   });
 
   /// 音频文件的标签信息
@@ -75,10 +48,6 @@ class TagEditorUI extends StatefulWidget {
   /// 额外的文件列表（用于批量编辑模式）
   final List<String>? additionalFiles;
   
-  // Web平台特有参数
-  final WebFileData? webFileData;
-  final List<WebFileData>? additionalWebFiles;
-
   @override
   State<TagEditorUI> createState() => _TagEditorUIState();
 }
@@ -284,7 +253,6 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
     // 加载效果等级设置
     _loadEffectLevel();
     
-    // 初始化Web平台特有变量
     
     // 初始化控制器并设置初始值
     _titleController = TextEditingController(text: widget.tag.title);
@@ -377,19 +345,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       // 读取所有文件的标签
       List<Tag?> tags = [];
 
-      // 如果是 Web 模式并且提供了 webFileData，使用内存字节解析
-      if (widget.webFileData != null || (widget.additionalWebFiles != null && widget.additionalWebFiles!.isNotEmpty)) {
-        // 收集所有 web 文件数据
-        final List<WebFileData> webFiles = [];
-        webFiles.add(widget.webFileData!);
-        if (widget.additionalWebFiles != null) webFiles.addAll(widget.additionalWebFiles!);
 
-        for (int i = 0; i < webFiles.length; i++) {
-          final wf = webFiles[i];
-          if (kDebugMode) print('KDEBUG: 正在解析 web 文件标签: ${wf.name}');
-          final t = await parseTagsFromBytesForWeb(wf.bytes);
-          tags.add(t);
-        }
+      if (false) {
       } else {
         for (String filePath in allFiles) {
           if (kDebugMode) {
