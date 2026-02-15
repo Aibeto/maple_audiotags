@@ -344,7 +344,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       
       // 读取所有文件的标签
       List<Tag?> tags = [];
-      
+
+
         for (String filePath in allFiles) {
           if (kDebugMode) {
             print('KDEBUG: 正在读取文件标签: $filePath');
