@@ -1,46 +1,24 @@
-// 导入Flutter基础Material设计组件库
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-// 导入动态颜色支持库，用于Android 12+的Monet取色功能
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'settings_page.dart';
-// 导入共享偏好设置库，用于持久化存储用户设置
 import 'package:shared_preferences/shared_preferences.dart';
-// 导入Dart IO库，用于文件操作
 import 'dart:io';
-// 导入路径处理库
 import 'package:path/path.dart' as path;
-// 导入标签编辑UI
 import 'tag_editor_ui.dart';
-// 导入设置页面
-
-// 导入日期格式化库
-
-// 导入权限处理库
 import 'package:permission_handler/permission_handler.dart';
-
-// 导入文件选择器
 import 'package:file_picker/file_picker.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'config/glass_effect_config.dart';
-
-// 导入 isolate 工具
 import 'isolate_utils.dart';
-
-// 导入网络图片加载库
 import 'package:http/http.dart' as http;
 import 'dart:ui';
-
-// 导入路径提供器，用于获取临时目录
 import 'package:path_provider/path_provider.dart';
-// 导入桌面拖放库
 import 'package:desktop_drop/desktop_drop.dart';
 
-// 程序入口点，使用async关键字支持异步操作
+// 入口点使用async关键字支持异步操作
 Future<void> _clearCacheDirectory() async {
   try {
     // 获取临时目录
@@ -335,11 +313,6 @@ class _HomePageState extends State<HomePage> {
     await Future.delayed(const Duration(milliseconds: 100));
 
     try {
-      // // 关闭"正在获取音频"对话框
-      // if (mounted) {
-      //   Navigator.of(context).pop();
-      // }
-      
       // 使用file_picker选择音频文件（支持多选）
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -373,7 +346,7 @@ class _HomePageState extends State<HomePage> {
             builder: (BuildContext context) {
               return AlertDialog(
                 title: const Text('文件数量过多'),
-                content: Text('您选择了 ${result.files.length} 个文件，超过最大限制 1000 个文件。\n请减少选择的文件数量。'),
+                content: Text('选择了 ${result.files.length} 个文件，超过最大限制 1000 个文件\n请减少选择的文件数量'),
                 actions: [
                   TextButton(
                     onPressed: () {
@@ -948,6 +921,7 @@ class _HomePageState extends State<HomePage> {
     // 过滤出音频文件
     List<XFile> audioFiles = files.where((file) {
       String? extension = path.extension(file.path).toLowerCase();
+      // TODO: 核验音频格式
       return ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a'].contains(extension);
     }).toList();
 

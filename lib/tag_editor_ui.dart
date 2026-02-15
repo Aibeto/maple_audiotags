@@ -2,22 +2,18 @@ import 'dart:async';
 import 'dart:io' show Platform, File;
 import 'dart:ui' as ui;
 import 'dart:math';
-
 import 'package:audiotags/audiotags.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config/glass_effect_config.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:crypto/crypto.dart'; // 添加用于计算MD5哈希值
-
-// 导入 isolate 工具
+import 'package:crypto/crypto.dart'; 
 import 'isolate_utils.dart';
 
 /// 音频标签编辑UI组件
@@ -96,13 +92,13 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
 
   /// 控制器用于编辑BPM
   late TextEditingController _bpmController;
-  
+
   /// 控制器用于编辑文件名
   late TextEditingController _filenameController;
-  
+
   /// 控制器用于编辑文件扩展名
   late TextEditingController _extensionController;
-  
+
   /// 滚动控制器用于批量编辑模式下的文件列表
   late ScrollController _fileListScrollController;
 
@@ -426,7 +422,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       setState(() {
         _isMd5Checking = false;
         _md5ProgressNotifier = null;
-        // 取消视为不一致，非取消且一致则隐藏不一致提示
+        // 用户手动取消视为不一致，没有取消且封面一致则隐藏不一致提示
         _md5Mismatch = wasCancelled ? true : !allCoversSame;
         if (allCoversSame) {
           _currentCoverImage = tags.first?.pictures.first.bytes;
@@ -676,10 +672,10 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           // 批量编辑模式下保存所有文件
           await _saveAllFiles(saveProgress, saveCancelled);
         } else {
-          // 单文件模式下直接保存
+          // 单文件模式下保存文件
           await _saveDirectly(saveProgress, saveCancelled);
         }
-        // 确保进度完成并关闭对话框
+        // 进度完成并关闭对话框
         saveProgress.value = 1.0;
         if (mounted) {
           try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
@@ -691,7 +687,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           
           // 显示错误消息
           if (kDebugMode) {
-            print('保存失败: ${e.message}');
+            print('KDEBUG：保存失败: ${e.message}');
           }
           
           // 使用对话框显示错误
@@ -848,13 +844,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         maxWidth: 560,
         progress: progress,
         actions: [
-          // TextButton(
-          //   onPressed: () {
-          //     cancel?.value = true;
-          //     try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
-          //   },
-            // child: const Text('取消'),
-          // ),
+          // TODO：添加取消按钮
         ],
       );
     }
@@ -896,17 +886,11 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
           _showGlassDialog(
             title: const Text('批量保存'),
-            content: Text('正在保存文件...\n已完成: $savedCount/${allFiles.length}\n当前: $fileName$fileExtension'),
+            content: Text('正在保存文件...\n已完成: $savedCount/${allFiles.length}\n当前文件: $fileName$fileExtension'),
             maxWidth: 560,
             progress: progress,
             actions: [
-              // TextButton(
-              //   onPressed: () {
-              //     cancel?.value = true;
-              //     try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
-              //   },
-                // child: const Text('取消'),
-              // ),
+              // TODO：添加取消按钮
             ],
           );
         }
@@ -980,7 +964,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       return;
     }
     
-    // 显示最终结果
+    // 显示保存结果
     if (mounted) {
       Navigator.of(context, rootNavigator: true).pop(); // 关闭进度对话框
       
@@ -989,11 +973,11 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
           '成功保存文件: $savedCount/${allFiles.length}';
       
       if (failedFiles.isNotEmpty) {
-        resultMessage += '\n标签保存失败: ${failedFiles.length} 个文件';
+        resultMessage += '\n标签保存失败: ${failedFiles.length} 个文件保存失败';
       }
       
       if (saveFailedFiles.isNotEmpty) {
-        resultMessage += '\n文件保存失败: ${saveFailedFiles.length} 个文件';
+        resultMessage += '\n文件保存失败: ${saveFailedFiles.length} 个文件保存失败';
       }
       
       _showGlassDialog(
@@ -1221,19 +1205,23 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         return;
       } else if (Platform.isIOS) {
         if (kDebugMode) {
-          print('KDEBUG: iOS平台使用标准文件保存方法');
+          print('KDEBUG: iOS文件保存');
         }
       } else if (Platform.isWindows) {
         if (kDebugMode) {
-          print('KDEBUG: Windows平台使用标准文件保存方法');
+          print('KDEBUG: Windows文件保存');
         }
       } else if (Platform.isMacOS) {
         if (kDebugMode) {
-          print('KDEBUG: macOS平台使用标准文件保存方法');
+          print('KDEBUG: macOS文件保存');
         }
       } else if (Platform.isLinux) {
         if (kDebugMode) {
-          print('KDEBUG: Linux平台使用标准文件保存方法');
+          print('KDEBUG: Linux文件保存');
+        }
+      } else {
+        if (kDebugMode) {
+          print('KDEBUG: 其他平台');
         }
       }
       
@@ -1354,13 +1342,13 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         
         await _saveFileForAndroid(userDefinedFileName);
         return;
-      } else if (Platform.isIOS) {
-        if (kDebugMode) {
-          print('KDEBUG: iOS平台不支持文件保存器的替代方案');
-        }
+      // } else if (Platform.isIOS) {
+      //   if (kDebugMode) {
+      //     print('KDEBUG: iOS平台不支持文件保存器的替代方案');
+      //   }
       } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
         if (kDebugMode) {
-          print('KDEBUG: ${Platform.operatingSystem}平台不支持文件保存器');
+          print('KDEBUG: ${Platform.operatingSystem}不支持文件保存器');
         }
       }
       
@@ -1602,7 +1590,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                 fontWeight: FontWeight.bold,
               ),
             ),
-            content: Text('图片文件过大(${(imageData.length / (1024 * 1024)).toStringAsFixed(2)}MB)，可能导致其他软件读取时崩溃。本软件通常可以正常处理这些问题但加载较慢，且可能无法保存到标签。你可以在封面显示后截图裁切来减小图片文件大小。'),
+            content: Text('图片文件过大(${(imageData.length / (1024 * 1024)).toStringAsFixed(2)}MB)，可能导致读取或写入时崩溃'),
             actions: [
               TextButton(
                 onPressed: () {
@@ -1737,13 +1725,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                           },
                         ),
                       ),
-                      // const SizedBox(width: 12),
-                      // TextButton(
-                      //   onPressed: () {
-                      //     _md5CancelledNotifier?.value = true;
-                      //   },
-                      //   child: const Text('取消'),
-                      // ),
+                      // TODO：支持手动取消封面MD5校验
                     ],
                   ),
                 )
@@ -1851,7 +1833,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                         children: const [
                           // Icon(Icons.warning, color: ui.Color(0xFFffff00)),
                           SizedBox(width: 8),
-                          Text('封面不一致，无法统一显示封面', style: TextStyle(color: Colors.orange, fontFamily: 'MapleMono')),
+                          Text('封面MD5不一致，无法统一显示封面', style: TextStyle(color: Colors.orange, fontFamily: 'MapleMono')),
                         ],
                       ),
                     )
