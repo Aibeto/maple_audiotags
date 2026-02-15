@@ -921,7 +921,7 @@ class _HomePageState extends State<HomePage> {
     // 过滤出音频文件
     List<XFile> audioFiles = files.where((file) {
       String? extension = path.extension(file.path).toLowerCase();
-      // TODO: 核验音频格式
+      // TODO：核验音频格式
       return ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a'].contains(extension);
     }).toList();
 
