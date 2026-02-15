@@ -152,8 +152,8 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12.0),
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black.withAlpha(0.2 as int)
-                        : Colors.white.withAlpha(0.2 as int),
+                        ? Colors.black.withAlpha(50)
+                        : Colors.white.withAlpha(50),
                   ),
                 ),
               ),
