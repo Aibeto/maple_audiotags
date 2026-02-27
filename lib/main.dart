@@ -922,6 +922,7 @@ class _HomePageState extends State<HomePage> {
     List<XFile> audioFiles = files.where((file) {
       String? extension = path.extension(file.path).toLowerCase();
       // TODO：核验音频格式
+      // 核验个鬼文档里没写支持的格式我去拿找我挨个测试吗
       return ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a'].contains(extension);
     }).toList();
 
@@ -938,7 +939,7 @@ class _HomePageState extends State<HomePage> {
           builder: (BuildContext context) {
             return AlertDialog(
               title: const Text('文件数量过多'),
-              content: Text('您拖入了 ${audioFiles.length} 个文件，超过最大限制 1000 个文件。\n请减少拖入的文件数量。'),
+              content: Text('拖入了 ${audioFiles.length} 个文件，超过最大限制 1000 个文件。\n请减少拖入的文件数量。'),
               actions: [
                 TextButton(
                   onPressed: () {
