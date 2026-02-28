@@ -1,4 +1,4 @@
-package aibeto.maple.audiotags
+package top.raincrat.audiotags
 
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -11,7 +11,7 @@ import io.flutter.plugin.common.MethodCall
 // import io.flutter.plugin.common.MethodResult
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "aibeto.maple.audiotags/filepath"
+    private val CHANNEL = "top.raincrat.audiotags/filepath"
     // private var pendingResult: MethodResult? = null
     
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

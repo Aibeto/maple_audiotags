@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "aibeto.maple" "\0"
-            VALUE "FileDescription", "maple_audiotags" "\0"
+            VALUE "CompanyName", "top.raincrat" "\0"
+            VALUE "FileDescription", "raincrat_audiotags" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "maple_audiotags" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 aibeto.maple. All rights reserved." "\0"
-            VALUE "OriginalFilename", "maple_audiotags.exe" "\0"
-            VALUE "ProductName", "maple_audiotags" "\0"
+            VALUE "InternalName", "raincrat_audiotags" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 top.raincrat. All rights reserved." "\0"
+            VALUE "OriginalFilename", "raincrat_audiotags.exe" "\0"
+            VALUE "ProductName", "raincrat_audiotags" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -773,7 +773,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         discNumber: _discNumberController.text.isNotEmpty ? int.tryParse(_discNumberController.text) : null,
         discTotal: _discTotalController.text.isNotEmpty ? int.tryParse(_discTotalController.text) : null,
         lyrics: _lyricsController.text,
-        duration: widget.tag.duration, // 保持原始时长
+        duration: widget.tag.duration, 
         bpm: _bpmController.text.isNotEmpty ? double.tryParse(_bpmController.text) : null,
         pictures: pictures ?? const [], // 使用新的图片数据，如果为空则使用空列表
       );
@@ -836,10 +836,10 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
       Navigator.of(context, rootNavigator: true).pop();
     }
     
-    // 显示批量保存进度（绑定进度监听器），允许取消
+    // 显示批量保存进度（绑定进度监听器）
     if (mounted) {
       _showGlassDialog(
-        title: const Text('批量保存'),
+        title: const Text('保存'),
         content: Text('正在保存文件...\n已完成: 0/${allFiles.length}'),
         maxWidth: 560,
         progress: progress,
@@ -885,7 +885,7 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
         if (mounted) {
           try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
           _showGlassDialog(
-            title: const Text('批量保存'),
+            title: const Text('保存'),
             content: Text('正在保存文件...\n已完成: $savedCount/${allFiles.length}\n当前文件: $fileName$fileExtension'),
             maxWidth: 560,
             progress: progress,
@@ -1784,11 +1784,12 @@ class _TagEditorUIState extends State<TagEditorUI> with TickerProviderStateMixin
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
-                            Text('点击添加封面图片', style: TextStyle(color: Colors.grey)),
+                            Text('点击添加封面', style: TextStyle(color: Colors.grey)),
                           ],
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
                     const SizedBox(height: 16),
                   ],
                 ),

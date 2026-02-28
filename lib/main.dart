@@ -136,7 +136,7 @@ class _MyAppState extends State<MyApp> {
         // 返回MaterialApp组件，这是Flutter应用的基础组件
         return MaterialApp(
           // 应用标题
-          title: '音乐标签编辑器',
+          title: '雨绘标签',
           // 设置主题模式
           themeMode: themeMode,
           // 浅色主题配置
@@ -176,7 +176,7 @@ class _MyAppState extends State<MyApp> {
           // 设置主页
           home: HomePage(
             // 页面标题
-            title: '音乐标签编辑',
+            title: '雨绘标签',
             // 当前暗色模式设置
             isDarkMode: _isDarkMode,
             // 切换主题的方法

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "aibeto.maple.audiotags"
+    namespace = "top.raincrat.audiotags"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "aibeto.maple.audiotags"
+        applicationId = "top.raincrat.audiotags"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
