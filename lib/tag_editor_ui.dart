@@ -48,6 +48,7 @@ class TagEditorUI extends StatefulWidget {
 
 class _TagEditorUIState extends State<TagEditorUI>
     with TickerProviderStateMixin {
+  /// 控制器用于编辑标题
   late TextEditingController _titleController;
 
   /// 控制器用于编辑艺术家

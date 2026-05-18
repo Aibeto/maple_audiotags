@@ -9,11 +9,19 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../config/ui_config.dart';
 
+/// 文件浏览页面
+/// 用于浏览文件系统并选择音频文件进行标签编辑
 class FilePage extends StatefulWidget {
+  /// 初始打开的目录路径
   final String? initialDir;
+
+  /// 已选中的文件列表
   final List<String> selectedFiles;
+
+  /// 选中文件变化时的回调函数
   final ValueChanged<List<String>> onSelectionChanged;
 
+  /// 构造函数
   const FilePage({
     super.key,
     this.initialDir,
@@ -26,12 +34,22 @@ class FilePage extends StatefulWidget {
 }
 
 class _FilePageState extends State<FilePage> {
+  /// 当前浏览的目录路径
   late String _currentDir;
+
+  /// 目录中的文件/文件夹条目列表
   List<_FileEntry> _entries = [];
+
+  /// 已选中的文件路径集合
   final Set<String> _selectedPaths = {};
+
+  /// 是否正在加载目录
   bool _isLoading = false;
+
+  /// 是否处于多选模式
   bool _multiSelectMode = false;
 
+  /// 可显示的文件扩展名集合（包括歌词文件）
   static const _displayExts = {
     '.mp3',
     '.flac',
@@ -46,6 +64,7 @@ class _FilePageState extends State<FilePage> {
     '.lrc',
   };
 
+  /// 可选择的文件扩展名集合（仅音频文件）
   static const _selectableExts = {
     '.mp3',
     '.flac',
@@ -59,13 +78,17 @@ class _FilePageState extends State<FilePage> {
     '.ape',
   };
 
+  /// 检查文件是否可以被选择
+  /// [path] 文件路径
   bool _isSelectableExtension(String path) {
     final ext = p.extension(path).toLowerCase();
     return _selectableExts.contains(ext);
   }
 
+  /// 底部栏的额外间距
   static const _bottomBarClearance = 12.0;
 
+  /// 获取默认的根目录路径，根据平台不同返回不同路径
   String get _defaultRoot {
     if (Platform.isAndroid) {
       return '/sdcard';
@@ -82,13 +105,17 @@ class _FilePageState extends State<FilePage> {
   @override
   void initState() {
     super.initState();
+    // 初始化当前目录
     _currentDir = widget.initialDir ?? _defaultRoot;
+    // 初始化已选中的文件
     _selectedPaths.addAll(widget.selectedFiles);
+    // 在第一帧绘制后请求权限并加载目录
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestPermissionAndLoad();
     });
   }
 
+  /// 请求存储权限并加载目录
   Future<void> _requestPermissionAndLoad() async {
     if (Platform.isAndroid) {
       final granted = await _requestStoragePermission();
@@ -101,6 +128,8 @@ class _FilePageState extends State<FilePage> {
     _loadDirectory();
   }
 
+  /// 请求 Android 存储权限
+  /// 返回是否获得权限
   Future<bool> _requestStoragePermission() async {
     try {
       final androidVersion =
@@ -130,6 +159,7 @@ class _FilePageState extends State<FilePage> {
     }
   }
 
+  /// 加载当前目录的内容
   Future<void> _loadDirectory() async {
     setState(() => _isLoading = true);
 
@@ -145,6 +175,7 @@ class _FilePageState extends State<FilePage> {
       }
 
       final List<FileSystemEntity> entities = dir.listSync();
+      // 排序：文件夹在前，文件在后，均按名称字母顺序
       entities.sort((a, b) {
         final aIsDir = a is Directory;
         final bIsDir = b is Directory;
@@ -156,6 +187,7 @@ class _FilePageState extends State<FilePage> {
             .compareTo(p.basename(b.path).toLowerCase());
       });
 
+      // 过滤并转换为 _FileEntry 对象
       _entries = entities
           .where((e) {
             if (e is Directory) {
@@ -190,6 +222,8 @@ class _FilePageState extends State<FilePage> {
     }
   }
 
+  /// 导航到指定目录
+  /// [dirPath] 目标目录路径
   void _navigateTo(String dirPath) {
     setState(() {
       _currentDir = dirPath;
@@ -197,6 +231,7 @@ class _FilePageState extends State<FilePage> {
     _loadDirectory();
   }
 
+  /// 导航到父目录
   void _navigateToParent() {
     final parent = p.dirname(_currentDir);
     if (parent != _currentDir) {
@@ -204,6 +239,8 @@ class _FilePageState extends State<FilePage> {
     }
   }
 
+  /// 切换文件的选中状态
+  /// [path] 文件路径
   void _toggleSelection(String path) {
     if (!_isSelectableExtension(path)) {
       Fluttertoast.showToast(msg: 'LRC 歌词文件不可选中');
@@ -224,6 +261,7 @@ class _FilePageState extends State<FilePage> {
     widget.onSelectionChanged(_selectedPaths.toList());
   }
 
+  /// 切换多选模式
   void _toggleMultiSelectMode() {
     setState(() {
       _multiSelectMode = !_multiSelectMode;
@@ -234,6 +272,7 @@ class _FilePageState extends State<FilePage> {
     });
   }
 
+  /// 选中所有可选择的文件
   void _selectAll() {
     setState(() {
       for (final entry in _entries) {
@@ -245,6 +284,7 @@ class _FilePageState extends State<FilePage> {
     widget.onSelectionChanged(_selectedPaths.toList());
   }
 
+  /// 取消所有选中
   void _deselectAll() {
     setState(() {
       _selectedPaths.clear();
@@ -252,6 +292,8 @@ class _FilePageState extends State<FilePage> {
     widget.onSelectionChanged([]);
   }
 
+  /// 重命名文件
+  /// [oldPath] 原文件路径
   Future<void> _renameFile(String oldPath) async {
     final oldName = p.basename(oldPath);
     final dirPath = p.dirname(oldPath);
@@ -261,6 +303,7 @@ class _FilePageState extends State<FilePage> {
       text: p.basenameWithoutExtension(oldPath),
     );
 
+    // 显示重命名对话框
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) {
@@ -342,6 +385,7 @@ class _FilePageState extends State<FilePage> {
       final newPath = p.join(dirPath, '$result$ext');
       try {
         await File(oldPath).rename(newPath);
+        // 如果文件在选中列表中，更新选中状态
         if (_selectedPaths.contains(oldPath)) {
           _selectedPaths.remove(oldPath);
           _selectedPaths.add(newPath);
@@ -355,6 +399,8 @@ class _FilePageState extends State<FilePage> {
     }
   }
 
+  /// 格式化文件大小
+  /// [bytes] 字节数
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -376,6 +422,7 @@ class _FilePageState extends State<FilePage> {
     );
   }
 
+  /// 构建路径栏
   Widget _buildPathBar() {
     final parts = _currentDir
         .split(Platform.pathSeparator)
@@ -440,6 +487,7 @@ class _FilePageState extends State<FilePage> {
     );
   }
 
+  /// 构建工具栏
   Widget _buildToolBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -534,6 +582,7 @@ class _FilePageState extends State<FilePage> {
     );
   }
 
+  /// 构建文件列表
   Widget _buildFileList() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -562,6 +611,9 @@ class _FilePageState extends State<FilePage> {
     );
   }
 
+  /// 构建单个文件/文件夹条目
+  /// [entry] 文件/文件夹条目
+  /// [isSelected] 是否被选中
   Widget _buildFileTile(_FileEntry entry, bool isSelected) {
     final isSelectable = _isSelectableExtension(entry.path);
     final isLrc = p.extension(entry.path).toLowerCase() == '.lrc';
@@ -709,6 +761,8 @@ class _FilePageState extends State<FilePage> {
     );
   }
 
+  /// 根据文件扩展名获取对应的图标
+  /// [path] 文件路径
   IconData _getFileIcon(String path) {
     final ext = p.extension(path).toLowerCase();
     if (ext == '.lrc') return Icons.lyrics;
@@ -717,6 +771,8 @@ class _FilePageState extends State<FilePage> {
     return Icons.audio_file;
   }
 
+  /// 根据文件扩展名获取对应的图标颜色
+  /// [path] 文件路径
   Color _getFileIconColor(String path) {
     final ext = p.extension(path).toLowerCase();
     if (ext == '.lrc') return Colors.teal;
@@ -729,6 +785,8 @@ class _FilePageState extends State<FilePage> {
     return Colors.blue;
   }
 
+  /// 显示文件操作选项
+  /// [entry] 文件条目
   void _showFileOptions(_FileEntry entry) {
     showModalBottomSheet(
       context: context,
@@ -788,6 +846,7 @@ class _FilePageState extends State<FilePage> {
     );
   }
 
+  /// 构建底部栏（显示选中的文件信息）
   Widget _buildBottomBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, _bottomBarClearance),
@@ -830,9 +889,15 @@ class _FilePageState extends State<FilePage> {
   }
 }
 
+/// 文件/文件夹条目数据类
 class _FileEntry {
+  /// 完整路径
   final String path;
+
+  /// 文件名
   final String name;
+
+  /// 是否是目录
   final bool isDirectory;
 
   const _FileEntry({

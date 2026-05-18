@@ -3,20 +3,31 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// THEME CONSTANTS
+// 主题常量
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// 新闻红色主题色
 const _kNewsRed = Color(0xFFFF2D55);
+
+/// 直播徽章颜色
 const _kLiveBadge = Color(0xFFFF3B30);
+
+/// 背景颜色（黑色）
 const _kBackground = Color(0xFF000000);
+
+/// 卡片背景颜色
 const _kCardBackground = Color(0xFF1C1C1E);
+
+/// 分隔线颜色
 const _kSeparator = Color(0xFF38383A);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DATA MODELS
+// 数据模型
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// 文章数据模型
 class _Article {
+  /// 构造函数
   const _Article({
     required this.headline,
     required this.publication,
@@ -26,18 +37,30 @@ class _Article {
     this.moreCoverage = false,
   });
 
+  /// 新闻标题
   final String headline;
+
+  /// 发布机构
   final String publication;
+
+  /// 图片资源路径
   final String imageAsset;
+
+  /// 是否是直播新闻
   final bool isLive;
+
+  /// 是否有头条故事徽章
   final bool hasTopStoriesBadge;
+
+  /// 是否有更多报道
   final bool moreCoverage;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MOCK DATA
+// 模拟数据
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// 头条故事列表
 const _kTopStories = [
   _Article(
     headline:
@@ -63,6 +86,7 @@ const _kTopStories = [
   ),
 ];
 
+/// 更多文章列表
 const _kMoreArticles = [
   _Article(
     headline:
@@ -97,18 +121,26 @@ const _kMoreArticles = [
   ),
 ];
 
+/// 话题分类数据模型
 class _TopicCategory {
+  /// 构造函数
   const _TopicCategory({
     required this.name,
     required this.color,
     required this.imageAsset,
   });
 
+  /// 分类名称
   final String name;
+
+  /// 分类主题色
   final Color color;
+
+  /// 图片资源路径
   final String imageAsset;
 }
 
+/// 话题分类列表
 const _kTopics = [
   _TopicCategory(
     name: 'Sport',
@@ -172,6 +204,7 @@ const _kTopics = [
   ),
 ];
 
+/// 分类标签列表
 const _kCategories = [
   'Sport',
   'Business',
@@ -183,10 +216,12 @@ const _kCategories = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MAIN SCREEN
+// 主屏幕
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Apple News 主页面组件
 class AppleNewsHomeScreen extends StatefulWidget {
+  /// 构造函数
   const AppleNewsHomeScreen({super.key});
 
   @override
@@ -194,14 +229,19 @@ class AppleNewsHomeScreen extends StatefulWidget {
 }
 
 class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
+  /// 是否正在搜索
   bool _isSearching = false;
-  bool _searchFieldFocused = false; // true = keyboard visible
-  int _selectedTab = 0; // 0=Today, 1=News+, 2=Audio, 3=Following
+
+  /// 搜索框是否获得焦点（true = 键盘可见）
+  bool _searchFieldFocused = false;
+
+  /// 当前选中的标签页索引（0=Today, 1=News+, 2=Audio, 3=Following）
+  int _selectedTab = 0;
 
   @override
   Widget build(BuildContext context) {
-    // Android 3-button nav requires us to push the bar above the opaque buttons.
-    // On iOS and gesture-nav Android, viewPaddingOf returns 0 so no offset applies.
+    // Android 三按钮导航需要我们将底部栏推到不透明按钮上方
+    // 在 iOS 和手势导航 Android 上，viewPaddingOf 返回 0，因此不应用偏移
     final platform = Theme.of(context).platform;
     final isIOS =
         platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
@@ -209,14 +249,14 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
 
     return Scaffold(
       backgroundColor: _kBackground,
-      extendBody: true, // Content flows behind the bottom bar
-      // Keep false so the bar manages its own keyboard layout.
+      extendBody: true, // 内容流到底部栏后面
+      // 保持 false，以便底部栏管理自己的键盘布局
       resizeToAvoidBottomInset: false,
       body: GestureDetector(
         onTap: () {
           if (_searchFieldFocused) {
-            // Match the DismissPill fix: use primaryFocus?.unfocus() so the
-            // FocusNode is fully released, not just moved to the scope parent.
+            // 与 DismissPill 修复一致：使用 primaryFocus?.unfocus()，
+            // 以便完全释放 FocusNode，而不仅仅是移动到作用域父级
             FocusManager.instance.primaryFocus?.unfocus();
           }
         },
@@ -226,10 +266,10 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
               duration: const Duration(milliseconds: 300),
               transitionBuilder: (child, animation) =>
                   FadeTransition(opacity: animation, child: child),
-              // Three body states:
-              //   1. Not searching        → Today articles view
-              //   2. Searching + unfocused → topic browse (searchable content)
-              //   3. Searching + focused   → "No Recent Searches" empty state
+              // 三种主体状态：
+              //   1. 未搜索        → 今日文章视图
+              //   2. 搜索中 + 未聚焦 → 话题浏览（可搜索内容）
+              //   3. 搜索中 + 聚焦   → "无最近搜索"空状态
               child: !_isSearching
                   ? _buildTodayView(key: const ValueKey('today'))
                   : _searchFieldFocused
@@ -241,9 +281,9 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           ],
         ),
       ),
-      // ── GlassSearchableBottomBar ─────────────────────────────────────────
-      // Wrapped in Padding to clear Android 3-button nav (sysBottom > 0).
-      // On iOS and gesture-nav Android, sysBottom is 0 so no offset is applied.
+      // ── 玻璃效果可搜索底部栏 ─────────────────────────────────────────
+      // 包裹在 Padding 中以清除 Android 三按钮导航（sysBottom > 0）
+      // 在 iOS 和手势导航 Android 上，sysBottom 为 0，因此不应用偏移
       bottomNavigationBar: Padding(
         padding: EdgeInsets.only(bottom: sysBottom),
         child: GlassSearchableBottomBar(
@@ -258,12 +298,11 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
           labelFontSize: 10,
           iconSize: 28,
           iconLabelSpacing: 0,
-          // Neutral frosted-glass pill. AnimatedGlassIndicator now renders
-          // this value directly without any hidden multiplier.
+          // 中性磨砂玻璃效果的药丸状指示器。AnimatedGlassIndicator 现在直接渲染此值，没有任何隐藏的乘数
           indicatorColor: Colors.white.withValues(alpha: 0.20),
           quality: GlassQuality.premium,
-          interactionBehavior: GlassInteractionBehavior
-              .full, // or .none / .glowOnly / .scaleOnly
+          interactionBehavior:
+              GlassInteractionBehavior.full, // 或 .none / .glowOnly / .scaleOnly
           glassSettings: LiquidGlassSettings(
             glassColor: const Color(0xAA1C1C1E),
             thickness: 30,
@@ -276,12 +315,12 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
             saturation: 1.2,
             specularSharpness: GlassSpecularSharpness.medium,
           ),
-          // ── Search bar config ───────────────────────────────────────────────
+          // ── 搜索栏配置 ───────────────────────────────────────────────
           searchConfig: GlassSearchBarConfig(
             hintText: 'Apple News',
             onSearchToggle: (active) => setState(() {
               _isSearching = active;
-              // Reset focus state when search closes so next open is fresh.
+              // 搜索关闭时重置焦点状态，以便下次打开时是全新的
               if (!active) _searchFieldFocused = false;
             }),
             onSearchFocusChanged: (focused) =>
@@ -320,9 +359,10 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // TODAY VIEW
+  // 今日视图
   // ─────────────────────────────────────────────────────────────────────────
 
+  /// 构建今日视图
   Widget _buildTodayView({Key? key}) {
     return CustomScrollView(
       key: key,
@@ -362,6 +402,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
     );
   }
 
+  /// 构建新闻标题栏
   Widget _buildNewsHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 16, 0),
@@ -418,6 +459,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
     );
   }
 
+  /// 构建分类标签行
   Widget _buildCategoryChips() {
     return SizedBox(
       height: 48,
@@ -432,6 +474,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
     );
   }
 
+  /// 构建章节标题
   Widget _buildSectionHeader(String title, String? subtitle) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
@@ -460,6 +503,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
     );
   }
 
+  /// 构建主要文章卡片（大图展示）
   Widget _buildHeroArticleCard(_Article article) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -521,6 +565,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
     );
   }
 
+  /// 构建紧凑文章卡片（小图展示）
   Widget _buildCompactArticleCard(_Article article) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -592,6 +637,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
     );
   }
 
+  /// 构建直播徽章
   Widget _buildLiveBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -611,10 +657,10 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // SEARCH VIEW
+  // 搜索视图
   // ─────────────────────────────────────────────────────────────────────────
 
-  // State 2 — searching but keyboard not open: show topic browse grid
+  /// 状态 2 — 搜索中但键盘未打开：显示话题浏览网格
   Widget _buildSearchBrowseView({Key? key}) {
     return CustomScrollView(
       key: key,
@@ -628,7 +674,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Apple News logo row — matches reference screenshot
+                // Apple News 标识行 — 符合参考截图
                 const Row(
                   children: [
                     Icon(Icons.apple, color: Colors.white, size: 22),
@@ -646,7 +692,7 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
                 const Text(
                   'Search',
                   style: TextStyle(
-                    color: Color(0xFF8E8E93), // iOS secondary-label grey
+                    color: Color(0xFF8E8E93), // iOS 次要标签灰色
                     fontSize: 34,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.5,
@@ -680,12 +726,11 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
     );
   }
 
-  // State 3 — searching + keyboard visible: show "No Recent Searches"
+  /// 状态 3 — 搜索中 + 键盘可见：显示"无最近搜索"
   Widget _buildNoRecentSearches({Key? key}) {
-    // viewInsetsOf gives the keyboard height each frame (no setState needed).
-    // Adding it as bottom padding to the outer container makes Center()
-    // center its content in the remaining space ABOVE the keyboard — exactly
-    // what Apple News does. The extra 50 leaves room for the floating bar.
+    // viewInsetsOf 每帧都提供键盘高度（不需要 setState）
+    // 将其添加到外部容器的底部 padding 中，使 Center() 将其内容居中在键盘上方的剩余空间中
+    // — 这正是 Apple News 所做的。额外的 50 为浮动栏留出空间
     final keyboardH = MediaQuery.viewInsetsOf(context).bottom;
     return Container(
       key: key,
@@ -731,7 +776,9 @@ class _AppleNewsHomeScreenState extends State<AppleNewsHomeScreen> {
   }
 }
 
+/// Apple News 演示页面
 class AppleNewsDemoPage extends StatelessWidget {
+  /// 构造函数
   const AppleNewsDemoPage({super.key});
 
   @override
@@ -763,12 +810,15 @@ class AppleNewsDemoPage extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUB-WIDGETS
+// 子组件
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// 分类标签组件
 class _CategoryChip extends StatelessWidget {
+  /// 构造函数
   const _CategoryChip({required this.label});
 
+  /// 标签文本
   final String label;
 
   @override
@@ -791,10 +841,12 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-// Full image-backed topic cards — matches iOS 26 Apple News search grid.
+/// 完整的图片支持话题卡片 — 符合 iOS 26 Apple News 搜索网格
 class _TopicCard extends StatelessWidget {
+  /// 构造函数
   const _TopicCard({required this.topic});
 
+  /// 话题分类数据
   final _TopicCategory topic;
 
   @override
@@ -805,7 +857,7 @@ class _TopicCard extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           ColoredBox(color: topic.color),
-          // Image at partial opacity so the category colour dominates.
+          // 图片部分透明，以便分类颜色占主导地位
           Opacity(
             opacity: 0.45,
             child: Image.asset(topic.imageAsset, fit: BoxFit.cover),

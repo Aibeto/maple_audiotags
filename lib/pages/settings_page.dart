@@ -4,7 +4,10 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../config/ui_config.dart';
 import 'apple_news_demo_page.dart';
 
+/// 设置页面
+/// 显示应用的设置选项，包括"关于"和"Apple News Demo"
 class SettingsPage extends StatelessWidget {
+  /// 构造函数
   const SettingsPage({super.key});
 
   @override
@@ -21,6 +24,7 @@ class SettingsPage extends StatelessWidget {
             width: double.infinity,
             child: Column(
               children: [
+                // 关于按钮
                 ListTile(
                   leading: const Icon(Icons.info_outline),
                   title: const Text(
@@ -30,6 +34,7 @@ class SettingsPage extends StatelessWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _showAboutDialog(context),
                 ),
+                // Apple News Demo 按钮
                 ListTile(
                   leading: const Icon(Icons.newspaper),
                   title: const Text(
@@ -56,6 +61,8 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  /// 显示"关于"对话框
+  /// [context] 构建上下文
   void _showAboutDialog(BuildContext context) {
     showDialog(
       context: context,
