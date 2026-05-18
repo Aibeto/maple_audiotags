@@ -9,8 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'config/glass_effect_config.dart';
+import 'config/ui_config.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:crypto/crypto.dart';
@@ -50,12 +49,6 @@ class TagEditorUI extends StatefulWidget {
 
 class _TagEditorUIState extends State<TagEditorUI>
     with TickerProviderStateMixin {
-  // 添加效果等级参数，控制UI特效强度
-  EffectLevel effectLevel = EffectLevel.medium;
-  // 效果等级数值，用于从SharedPreferences加载设置
-  int _effectLevelValue = 1;
-
-  /// 控制器用于编辑标题
   late TextEditingController _titleController;
 
   /// 控制器用于编辑艺术家
@@ -142,7 +135,7 @@ class _TagEditorUIState extends State<TagEditorUI>
           // 液态玻璃背景效果
           Positioned.fill(
             child: LiquidGlassLayer(
-              settings: GlassEffectConfig.baseSettings(level: effectLevel),
+              settings: UIConfig.baseSettings,
               child: LiquidGlass.inLayer(
                 shape: LiquidRoundedRectangle(
                   borderRadius: const Radius.circular(12.0),
@@ -196,7 +189,7 @@ class _TagEditorUIState extends State<TagEditorUI>
           // 液态玻璃背景效果
           Positioned.fill(
             child: LiquidGlassLayer(
-              settings: GlassEffectConfig.baseSettings(level: effectLevel),
+              settings: UIConfig.baseSettings,
               child: LiquidGlass.inLayer(
                 shape: LiquidRoundedRectangle(
                   borderRadius: const Radius.circular(12.0),
@@ -245,10 +238,6 @@ class _TagEditorUIState extends State<TagEditorUI>
   void initState() {
     super.initState();
 
-    // 加载效果等级设置
-    _loadEffectLevel();
-
-    // 初始化控制器并设置初始值
     _titleController = TextEditingController(text: widget.tag.title);
     _artistController = TextEditingController(text: widget.tag.trackArtist);
     _albumController = TextEditingController(text: widget.tag.album);
@@ -315,17 +304,6 @@ class _TagEditorUIState extends State<TagEditorUI>
     if (isBatchMode) {
       _checkAndLoadConsistentCoverImage();
     }
-  }
-
-  /// 从shared preferences加载效果等级
-  Future<void> _loadEffectLevel() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _effectLevelValue = prefs.getInt('effectLevel') ?? 1; // 默认值为1
-      effectLevel = _effectLevelValue <= 1
-          ? EffectLevel.low
-          : (_effectLevelValue == 2 ? EffectLevel.medium : EffectLevel.high);
-    });
   }
 
   /// 检查所有文件的封面是否一致，如果一致则加载显示
@@ -459,7 +437,7 @@ class _TagEditorUIState extends State<TagEditorUI>
   }) {
     return Center(
       child: LiquidGlassLayer(
-        settings: GlassEffectConfig.dialogSettings(level: effectLevel),
+        settings: UIConfig.dialogSettings,
         child: LiquidGlass.inLayer(
           shape: LiquidRoundedRectangle(
             borderRadius: const Radius.circular(20.0),
@@ -1891,9 +1869,7 @@ class _TagEditorUIState extends State<TagEditorUI>
                     // 液态玻璃
                     Positioned.fill(
                       child: LiquidGlassLayer(
-                        settings: GlassEffectConfig.baseSettings(
-                          level: effectLevel,
-                        ),
+                        settings: UIConfig.baseSettings,
                         child: LiquidGlass.inLayer(
                           shape: LiquidRoundedRectangle(
                             borderRadius: const Radius.circular(12.0),
@@ -2298,9 +2274,7 @@ class _TagEditorUIState extends State<TagEditorUI>
           if (_currentCoverImage != null)
             Positioned.fill(
               child: RotationTransition(
-                turns: effectLevel != EffectLevel.low
-                    ? _backgroundRotationAnimation
-                    : const AlwaysStoppedAnimation(0.0),
+                turns: _backgroundRotationAnimation,
                 child: Container(
                   alignment: Alignment.center,
                   child: Transform.scale(
@@ -2422,9 +2396,7 @@ class _TagEditorUIState extends State<TagEditorUI>
             top: MediaQuery.of(context).padding.top + 16, // 更靠近顶部
             left: 12.0,
             child: LiquidGlassLayer(
-              settings: GlassEffectConfig.smallButtonSettings(
-                level: effectLevel,
-              ),
+              settings: UIConfig.smallButtonSettings,
               child: LiquidGlass.inLayer(
                 shape: LiquidRoundedRectangle(
                   borderRadius: const Radius.circular(20.0),
@@ -2454,9 +2426,7 @@ class _TagEditorUIState extends State<TagEditorUI>
               children: [
                 // 还原更改按钮
                 LiquidGlassLayer(
-                  settings: GlassEffectConfig.largeButtonSettings(
-                    level: effectLevel,
-                  ),
+                  settings: UIConfig.largeButtonSettings,
                   child: LiquidGlass.inLayer(
                     shape: LiquidRoundedRectangle(
                       borderRadius: const Radius.circular(20.0),
@@ -2500,9 +2470,7 @@ class _TagEditorUIState extends State<TagEditorUI>
                 const SizedBox(width: 8),
                 // 保存按钮
                 LiquidGlassLayer(
-                  settings: GlassEffectConfig.largeButtonSettings(
-                    level: effectLevel,
-                  ),
+                  settings: UIConfig.largeButtonSettings,
                   child: LiquidGlass.inLayer(
                     shape: LiquidRoundedRectangle(
                       borderRadius: const Radius.circular(20.0),
