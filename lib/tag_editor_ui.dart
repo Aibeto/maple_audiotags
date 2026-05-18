@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'config/ui_config.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
@@ -133,20 +133,14 @@ class _TagEditorUIState extends State<TagEditorUI>
         children: [
           // 液态玻璃背景效果
           Positioned.fill(
-            child: LiquidGlassLayer(
+            child: GlassContainer(
+              useOwnLayer: true,
               settings: UIConfig.baseSettings,
-              child: LiquidGlass.inLayer(
-                shape: LiquidRoundedRectangle(
-                  borderRadius: const Radius.circular(12.0),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12.0),
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black.withAlpha(50)
-                        : Colors.white.withAlpha(50),
-                  ),
-                ),
+              shape: const LiquidRoundedRectangle(borderRadius: 12.0),
+              child: Container(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withAlpha(50)
+                    : Colors.white.withAlpha(50),
               ),
             ),
           ),
@@ -187,20 +181,14 @@ class _TagEditorUIState extends State<TagEditorUI>
         children: [
           // 液态玻璃背景效果
           Positioned.fill(
-            child: LiquidGlassLayer(
+            child: GlassContainer(
+              useOwnLayer: true,
               settings: UIConfig.baseSettings,
-              child: LiquidGlass.inLayer(
-                shape: LiquidRoundedRectangle(
-                  borderRadius: const Radius.circular(12.0),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12.0),
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black.withAlpha(50)
-                        : Colors.white.withAlpha(50),
-                  ),
-                ),
+              shape: const LiquidRoundedRectangle(borderRadius: 12.0),
+              child: Container(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withAlpha(50)
+                    : Colors.white.withAlpha(50),
               ),
             ),
           ),
@@ -435,93 +423,90 @@ class _TagEditorUIState extends State<TagEditorUI>
     ValueListenable<double>? progress,
   }) {
     return Center(
-      child: LiquidGlassLayer(
+      child: GlassContainer(
+        useOwnLayer: true,
         settings: UIConfig.dialogSettings,
-        child: LiquidGlass.inLayer(
-          shape: LiquidRoundedRectangle(
-            borderRadius: const Radius.circular(20.0),
+        shape: const LiquidRoundedRectangle(borderRadius: 20.0),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20.0),
+            color: Theme.of(context).colorScheme.surface.withAlpha(220),
           ),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20.0),
-              color: Theme.of(context).colorScheme.surface.withAlpha(220),
-            ),
-            padding: const EdgeInsets.all(24.0),
-            width: (() {
-              final double deviceWidth = MediaQuery.of(context).size.width;
-              if (maxWidth != null) {
-                return min(deviceWidth * 0.98, maxWidth);
-              }
-              return deviceWidth * 0.8;
-            })(),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (title != null)
-                  DefaultTextStyle(
-                    style: TextStyle(
-                      fontFamily: 'MapleMono',
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).textTheme.titleLarge?.color,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withAlpha(75),
-                          blurRadius: 4,
-                          offset: const Offset(1, 1),
-                        ),
+          padding: const EdgeInsets.all(24.0),
+          width: (() {
+            final double deviceWidth = MediaQuery.of(context).size.width;
+            if (maxWidth != null) {
+              return min(deviceWidth * 0.98, maxWidth);
+            }
+            return deviceWidth * 0.8;
+          })(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (title != null)
+                DefaultTextStyle(
+                  style: TextStyle(
+                    fontFamily: 'MapleMono',
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.titleLarge?.color,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withAlpha(75),
+                        blurRadius: 4,
+                        offset: const Offset(1, 1),
+                      ),
+                    ],
+                  ),
+                  child: title,
+                ),
+              if (title != null && (progress != null || content != null))
+                const SizedBox(height: 16),
+
+              if (progress != null) ...[
+                ValueListenableBuilder<double>(
+                  valueListenable: progress,
+                  builder: (context, value, _) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        LinearProgressIndicator(value: value.clamp(0.0, 1.0)),
+                        const SizedBox(height: 12),
+                        Text('${(value * 100).toStringAsFixed(0)}%'),
                       ],
-                    ),
-                    child: title,
-                  ),
-                if (title != null && (progress != null || content != null))
-                  const SizedBox(height: 16),
-
-                if (progress != null) ...[
-                  ValueListenableBuilder<double>(
-                    valueListenable: progress,
-                    builder: (context, value, _) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          LinearProgressIndicator(value: value.clamp(0.0, 1.0)),
-                          const SizedBox(height: 12),
-                          Text('${(value * 100).toStringAsFixed(0)}%'),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                ],
-
-                if (content != null)
-                  DefaultTextStyle(
-                    style: TextStyle(
-                      fontFamily: 'MapleMono',
-                      fontSize: 17,
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                      height: 1.5,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withAlpha(50),
-                          blurRadius: 2,
-                          offset: const Offset(0.5, 0.5),
-                        ),
-                      ],
-                    ),
-                    child: content,
-                  ),
-
-                if (actions != null && actions.isNotEmpty) ...[
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: actions,
-                  ),
-                ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
               ],
-            ),
+
+              if (content != null)
+                DefaultTextStyle(
+                  style: TextStyle(
+                    fontFamily: 'MapleMono',
+                    fontSize: 17,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                    height: 1.5,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withAlpha(50),
+                        blurRadius: 2,
+                        offset: const Offset(0.5, 0.5),
+                      ),
+                    ],
+                  ),
+                  child: content,
+                ),
+
+              if (actions != null && actions.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: actions,
+                ),
+              ],
+            ],
           ),
         ),
       ),
@@ -1761,31 +1746,27 @@ class _TagEditorUIState extends State<TagEditorUI>
                   children: [
                     // 液态玻璃
                     Positioned.fill(
-                      child: LiquidGlassLayer(
+                      child: GlassContainer(
+                        useOwnLayer: true,
                         settings: LiquidGlassSettings(
                           thickness: 6,
                           blur: 0.5,
                           lightAngle: 0.3 * pi,
                           lightIntensity: 0.7,
                           ambientStrength: 0.2,
-                          blend: 0.5,
                           refractiveIndex: 1.2,
                           chromaticAberration: 0.2,
                           saturation: 1.05,
+                          specularSharpness: GlassSpecularSharpness.medium,
                         ),
-                        child: LiquidGlass.inLayer(
-                          shape: LiquidRoundedRectangle(
-                            borderRadius: const Radius.circular(12.0),
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12.0),
-                              color:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.black.withAlpha(50)
-                                  : Colors.white.withAlpha(50),
-                            ),
+                        shape: const LiquidRoundedRectangle(borderRadius: 12.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12.0),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.black.withAlpha(50)
+                                : Colors.white.withAlpha(50),
                           ),
                         ),
                       ),
@@ -1867,21 +1848,17 @@ class _TagEditorUIState extends State<TagEditorUI>
                   children: [
                     // 液态玻璃
                     Positioned.fill(
-                      child: LiquidGlassLayer(
+                      child: GlassContainer(
+                        useOwnLayer: true,
                         settings: UIConfig.baseSettings,
-                        child: LiquidGlass.inLayer(
-                          shape: LiquidRoundedRectangle(
-                            borderRadius: const Radius.circular(12.0),
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12.0),
-                              color:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.black.withAlpha(50)
-                                  : Colors.white.withAlpha(50),
-                            ),
+                        shape: const LiquidRoundedRectangle(borderRadius: 12.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12.0),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.black.withAlpha(50)
+                                : Colors.white.withAlpha(50),
                           ),
                         ),
                       ),
@@ -2424,88 +2401,72 @@ class _TagEditorUIState extends State<TagEditorUI>
               mainAxisSize: MainAxisSize.min,
               children: [
                 // 还原更改按钮
-                LiquidGlassLayer(
+                GlassContainer(
+                  useOwnLayer: true,
                   settings: UIConfig.largeButtonSettings,
-                  child: LiquidGlass.inLayer(
-                    shape: LiquidRoundedRectangle(
-                      borderRadius: const Radius.circular(20.0),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: 8.0,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _resetChanges,
-                          borderRadius: BorderRadius.circular(20.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '还原更改',
-                                style: TextStyle(
-                                  fontFamily: 'MapleMono',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.normal,
-                                  color: Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.color,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Icon(Icons.refresh, size: 20),
-                            ],
+                  shape: const LiquidRoundedRectangle(borderRadius: 20.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12.0,
+                    vertical: 8.0,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _resetChanges,
+                      borderRadius: BorderRadius.circular(20.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '还原更改',
+                            style: TextStyle(
+                              fontFamily: 'MapleMono',
+                              fontSize: 14,
+                              fontWeight: FontWeight.normal,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.color,
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.refresh, size: 20),
+                        ],
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 // 保存按钮
-                LiquidGlassLayer(
+                GlassContainer(
+                  useOwnLayer: true,
                   settings: UIConfig.largeButtonSettings,
-                  child: LiquidGlass.inLayer(
-                    shape: LiquidRoundedRectangle(
-                      borderRadius: const Radius.circular(20.0),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: 8.0,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _saveTags,
-                          borderRadius: BorderRadius.circular(20.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '保存',
-                                style: TextStyle(
-                                  fontFamily: 'MapleMono',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.normal,
-                                  color: Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.color,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Icon(Icons.save, size: 20),
-                            ],
+                  shape: const LiquidRoundedRectangle(borderRadius: 20.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12.0,
+                    vertical: 8.0,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _saveTags,
+                      borderRadius: BorderRadius.circular(20.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '保存',
+                            style: TextStyle(
+                              fontFamily: 'MapleMono',
+                              fontSize: 14,
+                              fontWeight: FontWeight.normal,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.color,
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.save, size: 20),
+                        ],
                       ),
                     ),
                   ),

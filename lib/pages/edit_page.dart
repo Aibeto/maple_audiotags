@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../config/ui_config.dart';
 import '../isolate_utils.dart';
@@ -92,45 +92,37 @@ class _EditPageState extends State<EditPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          LiquidGlassLayer(
+          GlassContainer(
+            useOwnLayer: true,
             settings: UIConfig.fileSelectorSettings,
-            child: LiquidGlass.inLayer(
-              shape: const LiquidRoundedRectangle(
-                borderRadius: Radius.circular(28.0),
-              ),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24.0,
-                  vertical: 16.0,
+            shape: const LiquidRoundedRectangle(borderRadius: 28.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 16.0,
+            ),
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.edit_note, size: 48, color: Colors.grey),
+                SizedBox(height: 12),
+                Text(
+                  '请先在文件页面选择文件',
+                  style: TextStyle(
+                    fontFamily: 'MapleMono',
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28.0),
+                SizedBox(height: 4),
+                Text(
+                  '切换到"文件"标签页浏览并选择 mp3 文件',
+                  style: TextStyle(
+                    fontFamily: 'MapleMono',
+                    fontSize: 13,
+                    color: Colors.grey,
+                  ),
                 ),
-                child: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.edit_note, size: 48, color: Colors.grey),
-                    SizedBox(height: 12),
-                    Text(
-                      '请先在文件页面选择文件',
-                      style: TextStyle(
-                        fontFamily: 'MapleMono',
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '切换到"文件"标签页浏览并选择 mp3 文件',
-                      style: TextStyle(
-                        fontFamily: 'MapleMono',
-                        fontSize: 13,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
         ],

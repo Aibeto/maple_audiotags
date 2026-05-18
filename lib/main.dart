@@ -1,11 +1,10 @@
 import 'dart:io';
-import 'dart:math' show pi;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:http/http.dart' as http;
 import 'dart:ui' as ui;
 import 'package:path_provider/path_provider.dart';
@@ -181,17 +180,35 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final sysBottom = MediaQuery.viewPaddingOf(context).bottom;
     return Scaffold(
       extendBody: true,
       resizeToAvoidBottomInset: false,
       body: Stack(
-        children: [
-          _buildBackground(),
-          _buildPageContent(),
-          _buildFloatingNavBar(sysBottom),
-          _buildTopButtons(),
+        children: [_buildBackground(), _buildPageContent(), _buildTopButtons()],
+      ),
+      bottomNavigationBar: GlassBottomBar(
+        tabs: [
+          GlassBottomBarTab(
+            label: '文件',
+            icon: const Icon(Icons.folder_open_outlined),
+            activeIcon: const Icon(Icons.folder_open),
+            glowColor: Colors.blue,
+          ),
+          GlassBottomBarTab(
+            label: '编辑',
+            icon: const Icon(Icons.edit_outlined),
+            activeIcon: const Icon(Icons.edit),
+            glowColor: Colors.orange,
+          ),
+          GlassBottomBarTab(
+            label: '设置',
+            icon: const Icon(Icons.settings_outlined),
+            activeIcon: const Icon(Icons.settings),
+            glowColor: Colors.grey,
+          ),
         ],
+        selectedIndex: _currentIndex,
+        onTabSelected: (index) => _onTabChanged(index),
       ),
     );
   }
@@ -228,203 +245,82 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildPageContent() {
-    final bottomPadding = 68.0 + MediaQuery.viewPaddingOf(context).bottom;
     return SafeArea(
       bottom: false,
-      child: Padding(
-        padding: EdgeInsets.only(bottom: bottomPadding),
-        child: IndexedStack(
-          index: _currentIndex,
-          children: [
-            FilePage(
-              selectedFiles: _selectedFiles,
-              onSelectionChanged: _onSelectionChanged,
-            ),
-            DropTarget(
-              onDragDone: (detail) {
-                final audioExts = {
-                  '.mp3',
-                  '.flac',
-                  '.wav',
-                  '.aac',
-                  '.ogg',
-                  '.wma',
-                  '.m4a',
-                  '.opus',
-                  '.aiff',
-                  '.ape',
-                };
-                final audioFiles = detail.files
-                    .where((f) {
-                      final ext = f.path.toLowerCase();
-                      return audioExts.any((e) => ext.endsWith(e));
-                    })
-                    .map((f) => f.path)
-                    .toList();
-                if (audioFiles.isNotEmpty) {
-                  setState(() => _selectedFiles = audioFiles);
-                  _onTabChanged(1);
-                }
-              },
-              child: EditPage(filePaths: _selectedFiles),
-            ),
-            SettingsPage(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFloatingNavBar(double sysBottom) {
-    return Positioned(
-      bottom: 8.0 + sysBottom,
-      left: MediaQuery.of(context).size.width * 0.06,
-      right: MediaQuery.of(context).size.width * 0.06,
-      child: LiquidGlassLayer(
-        settings: _navBarGlassSettings,
-        child: LiquidGlass.inLayer(
-          shape: const LiquidRoundedRectangle(
-            borderRadius: Radius.circular(28.0),
+      child: IndexedStack(
+        index: _currentIndex,
+        children: [
+          FilePage(
+            selectedFiles: _selectedFiles,
+            onSelectionChanged: _onSelectionChanged,
           ),
-          child: Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28.0),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildTabItem(
-                  Icons.folder_open_outlined,
-                  Icons.folder_open,
-                  '文件',
-                  0,
-                ),
-                _buildTabItem(Icons.edit_outlined, Icons.edit, '编辑', 1),
-                _buildTabItem(Icons.settings_outlined, Icons.settings, '设置', 2),
-              ],
-            ),
+          DropTarget(
+            onDragDone: (detail) {
+              final audioExts = {
+                '.mp3',
+                '.flac',
+                '.wav',
+                '.aac',
+                '.ogg',
+                '.wma',
+                '.m4a',
+                '.opus',
+                '.aiff',
+                '.ape',
+              };
+              final audioFiles = detail.files
+                  .where((f) {
+                    final ext = f.path.toLowerCase();
+                    return audioExts.any((e) => ext.endsWith(e));
+                  })
+                  .map((f) => f.path)
+                  .toList();
+              if (audioFiles.isNotEmpty) {
+                setState(() => _selectedFiles = audioFiles);
+                _onTabChanged(1);
+              }
+            },
+            child: EditPage(filePaths: _selectedFiles),
           ),
-        ),
+          SettingsPage(),
+        ],
       ),
     );
-  }
-
-  static final _navBarGlassSettings = LiquidGlassSettings(
-    thickness: 6,
-    blur: 1.0,
-    lightAngle: 0.35 * pi,
-    lightIntensity: 0.45,
-    ambientStrength: 0.12,
-    blend: 0.3,
-    refractiveIndex: 1.15,
-    chromaticAberration: 0.08,
-    saturation: 1.04,
-  );
-
-  Widget _buildTabItem(
-    IconData outlinedIcon,
-    IconData filledIcon,
-    String label,
-    int index,
-  ) {
-    final isSelected = _currentIndex == index;
-    return GestureDetector(
-      onTap: () => _onTabChanged(index),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.white.withValues(alpha: isDarkModeActive ? 0.18 : 0.14)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isSelected ? filledIcon : outlinedIcon,
-              size: 28,
-              color: isSelected
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.65),
-            ),
-            const SizedBox(height: 1),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'MapleMono',
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.65),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  bool get isDarkModeActive {
-    if (widget.isDarkMode == null) {
-      return MediaQuery.of(context).platformBrightness == Brightness.dark;
-    }
-    return widget.isDarkMode!;
   }
 
   Widget _buildTopButtons() {
     return Positioned(
-      top: MediaQuery.of(context).padding.top + 8.0,
+      top: MediaQuery.of(context).padding.top + 0,
       right: 12.0,
-      child: LiquidGlassLayer(
+      child: GlassContainer(
+        useOwnLayer: true,
         settings: UIConfig.smallButtonSettings,
-        child: LiquidGlass.inLayer(
-          shape: const LiquidRoundedRectangle(
-            borderRadius: Radius.circular(20.0),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10.0,
-              vertical: 8.0,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20.0),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: widget.toggleTheme,
-                borderRadius: BorderRadius.circular(20.0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      widget.isDarkMode == null
-                          ? Icons.auto_mode
-                          : (widget.isDarkMode!
-                                ? Icons.dark_mode
-                                : Icons.light_mode),
-                      size: 18,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      widget.isDarkMode == null
-                          ? '跟随系统'
-                          : (widget.isDarkMode! ? '深色' : '浅色'),
-                      style: const TextStyle(
-                        fontFamily: 'MapleMono',
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+        shape: const LiquidRoundedRectangle(borderRadius: 20.0),
+        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.toggleTheme,
+            borderRadius: BorderRadius.circular(20.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  widget.isDarkMode == null
+                      ? Icons.auto_mode
+                      : (widget.isDarkMode!
+                            ? Icons.dark_mode
+                            : Icons.light_mode),
+                  size: 18,
                 ),
-              ),
+                const SizedBox(width: 4),
+                Text(
+                  widget.isDarkMode == null
+                      ? '跟随系统'
+                      : (widget.isDarkMode! ? '深色' : '浅色'),
+                  style: const TextStyle(fontFamily: 'MapleMono', fontSize: 12),
+                ),
+              ],
             ),
           ),
         ),

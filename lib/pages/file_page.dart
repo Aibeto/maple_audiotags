@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
 
@@ -265,79 +265,72 @@ class _FilePageState extends State<FilePage> {
       context: context,
       builder: (ctx) {
         return Center(
-          child: LiquidGlassLayer(
-            settings: UIConfig.dialogSettings,
-            child: LiquidGlass.inLayer(
-              shape: const LiquidRoundedRectangle(
-                borderRadius: Radius.circular(20.0),
-              ),
-              child: Container(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(ctx).size.width * 0.85,
-                ),
-                padding: const EdgeInsets.all(24.0),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20.0),
-                  color: Theme.of(ctx).colorScheme.surface.withAlpha(220),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '重命名',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'MapleMono',
-                        color: Theme.of(ctx).textTheme.titleLarge?.color,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(ctx).size.width * 0.85,
+            ),
+            child: GlassContainer(
+              useOwnLayer: true,
+              settings: UIConfig.dialogSettings,
+              shape: const LiquidRoundedRectangle(borderRadius: 20.0),
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '重命名',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'MapleMono',
+                      color: Theme.of(ctx).textTheme.titleLarge?.color,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '当前: $oldName',
+                    style: TextStyle(
+                      fontFamily: 'MapleMono',
+                      color: Theme.of(ctx).textTheme.bodySmall?.color,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      labelText: '新文件名',
+                      suffixText: ext,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '当前: $oldName',
-                      style: TextStyle(
-                        fontFamily: 'MapleMono',
-                        color: Theme.of(ctx).textTheme.bodySmall?.color,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: controller,
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        labelText: '新文件名',
-                        suffixText: ext,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.0),
+                    style: const TextStyle(fontFamily: 'MapleMono'),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text(
+                          '取消',
+                          style: TextStyle(fontFamily: 'MapleMono'),
                         ),
                       ),
-                      style: const TextStyle(fontFamily: 'MapleMono'),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text(
-                            '取消',
-                            style: TextStyle(fontFamily: 'MapleMono'),
-                          ),
+                      const SizedBox(width: 12),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pop(ctx, controller.text.trim()),
+                        child: const Text(
+                          '确定',
+                          style: TextStyle(fontFamily: 'MapleMono'),
                         ),
-                        const SizedBox(width: 12),
-                        TextButton(
-                          onPressed: () =>
-                              Navigator.pop(ctx, controller.text.trim()),
-                          child: const Text(
-                            '确定',
-                            style: TextStyle(fontFamily: 'MapleMono'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -391,70 +384,57 @@ class _FilePageState extends State<FilePage> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-      child: LiquidGlassLayer(
+      child: GlassContainer(
+        useOwnLayer: true,
         settings: UIConfig.smallButtonSettings,
-        child: LiquidGlass.inLayer(
-          shape: const LiquidRoundedRectangle(
-            borderRadius: Radius.circular(12.0),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12.0,
-              vertical: 8.0,
+        shape: const LiquidRoundedRectangle(borderRadius: 12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: _navigateToParent,
+              child: const Icon(Icons.arrow_upward, size: 20),
             ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: _navigateToParent,
-                  child: const Icon(Icons.arrow_upward, size: 20),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => _navigateTo('/'),
-                          child: Text(
-                            '/ ',
-                            style: TextStyle(
-                              fontFamily: 'MapleMono',
-                              fontSize: 13,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _navigateTo('/'),
+                      child: Text(
+                        '/ ',
+                        style: TextStyle(
+                          fontFamily: 'MapleMono',
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    for (int i = 0; i < parts.length; i++)
+                      GestureDetector(
+                        onTap: () {
+                          final subPath =
+                              '/${parts.sublist(0, i + 1).join('/')}';
+                          _navigateTo(subPath);
+                        },
+                        child: Text(
+                          '${parts[i]} ${i < parts.length - 1 ? '/ ' : ''}',
+                          style: TextStyle(
+                            fontFamily: 'MapleMono',
+                            fontSize: 13,
+                            color: i == parts.length - 1
+                                ? Theme.of(context).textTheme.bodyMedium?.color
+                                : Theme.of(context).colorScheme.primary,
                           ),
                         ),
-                        for (int i = 0; i < parts.length; i++)
-                          GestureDetector(
-                            onTap: () {
-                              final subPath =
-                                  '/${parts.sublist(0, i + 1).join('/')}';
-                              _navigateTo(subPath);
-                            },
-                            child: Text(
-                              '${parts[i]} ${i < parts.length - 1 ? '/ ' : ''}',
-                              style: TextStyle(
-                                fontFamily: 'MapleMono',
-                                fontSize: 13,
-                                color: i == parts.length - 1
-                                    ? Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium?.color
-                                    : Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                      ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -465,116 +445,86 @@ class _FilePageState extends State<FilePage> {
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
       child: Row(
         children: [
-          LiquidGlassLayer(
+          GlassContainer(
+            useOwnLayer: true,
             settings: UIConfig.smallButtonSettings,
-            child: LiquidGlass.inLayer(
-              shape: const LiquidRoundedRectangle(
-                borderRadius: Radius.circular(8.0),
-              ),
-              child: InkWell(
-                onTap: _toggleMultiSelectMode,
-                borderRadius: BorderRadius.circular(8.0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10.0,
-                    vertical: 6.0,
+            shape: const LiquidRoundedRectangle(borderRadius: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10.0,
+              vertical: 6.0,
+            ),
+            child: InkWell(
+              onTap: _toggleMultiSelectMode,
+              borderRadius: BorderRadius.circular(8.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _multiSelectMode
+                        ? Icons.check_box
+                        : Icons.check_box_outline_blank,
+                    size: 18,
                   ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.0),
+                  const SizedBox(width: 4),
+                  Text(
+                    _multiSelectMode ? '取消多选' : '多选',
+                    style: const TextStyle(
+                      fontFamily: 'MapleMono',
+                      fontSize: 12,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _multiSelectMode
-                            ? Icons.check_box
-                            : Icons.check_box_outline_blank,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _multiSelectMode ? '取消多选' : '多选',
-                        style: const TextStyle(
-                          fontFamily: 'MapleMono',
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                ],
               ),
             ),
           ),
           if (_multiSelectMode) ...[
             const SizedBox(width: 8),
-            LiquidGlassLayer(
+            GlassContainer(
+              useOwnLayer: true,
               settings: UIConfig.smallButtonSettings,
-              child: LiquidGlass.inLayer(
-                shape: const LiquidRoundedRectangle(
-                  borderRadius: Radius.circular(8.0),
-                ),
-                child: InkWell(
-                  onTap: _selectAll,
-                  borderRadius: BorderRadius.circular(8.0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10.0,
-                      vertical: 6.0,
+              shape: const LiquidRoundedRectangle(borderRadius: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10.0,
+                vertical: 6.0,
+              ),
+              child: InkWell(
+                onTap: _selectAll,
+                borderRadius: BorderRadius.circular(8.0),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.select_all, size: 18),
+                    SizedBox(width: 4),
+                    Text(
+                      '全选',
+                      style: TextStyle(fontFamily: 'MapleMono', fontSize: 12),
                     ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.select_all, size: 18),
-                        SizedBox(width: 4),
-                        Text(
-                          '全选',
-                          style: TextStyle(
-                            fontFamily: 'MapleMono',
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            LiquidGlassLayer(
+            GlassContainer(
+              useOwnLayer: true,
               settings: UIConfig.smallButtonSettings,
-              child: LiquidGlass.inLayer(
-                shape: const LiquidRoundedRectangle(
-                  borderRadius: Radius.circular(8.0),
-                ),
-                child: InkWell(
-                  onTap: _deselectAll,
-                  borderRadius: BorderRadius.circular(8.0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10.0,
-                      vertical: 6.0,
+              shape: const LiquidRoundedRectangle(borderRadius: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10.0,
+                vertical: 6.0,
+              ),
+              child: InkWell(
+                onTap: _deselectAll,
+                borderRadius: BorderRadius.circular(8.0),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.deselect, size: 18),
+                    SizedBox(width: 4),
+                    Text(
+                      '全不选',
+                      style: TextStyle(fontFamily: 'MapleMono', fontSize: 12),
                     ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.deselect, size: 18),
-                        SizedBox(width: 4),
-                        Text(
-                          '全不选',
-                          style: TextStyle(
-                            fontFamily: 'MapleMono',
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -620,12 +570,15 @@ class _FilePageState extends State<FilePage> {
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 2.0),
       child: Opacity(
         opacity: isLrc ? 0.5 : 1.0,
-        child: LiquidGlassLayer(
+        child: GlassContainer(
+          useOwnLayer: true,
           settings: UIConfig.smallButtonSettings,
-          child: LiquidGlass.inLayer(
-            shape: LiquidRoundedRectangle(
-              borderRadius: const Radius.circular(10.0),
-            ),
+          shape: const LiquidRoundedRectangle(borderRadius: 10.0),
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+          child: ColoredBox(
+            color: isSelected && isSelectable
+                ? Theme.of(context).colorScheme.primary.withAlpha(30)
+                : Colors.transparent,
             child: Material(
               color: Colors.transparent,
               child: InkWell(
@@ -644,121 +597,109 @@ class _FilePageState extends State<FilePage> {
                     _showFileOptions(entry);
                   }
                 },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12.0,
-                    vertical: 10.0,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10.0),
-                    color: isSelected && isSelectable
-                        ? Theme.of(context).colorScheme.primary.withAlpha(30)
-                        : Colors.transparent,
-                  ),
-                  child: Row(
-                    children: [
-                      if (_multiSelectMode && !entry.isDirectory)
-                        Icon(
-                          isLrc
-                              ? Icons.block
-                              : (isSelected
-                                    ? Icons.check_box
-                                    : Icons.check_box_outline_blank),
-                          size: 20,
-                          color: isLrc
-                              ? Theme.of(context).textTheme.bodySmall?.color
-                              : (isSelected
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall?.color),
-                        ),
-                      if (_multiSelectMode && !entry.isDirectory)
-                        const SizedBox(width: 8),
+                child: Row(
+                  children: [
+                    if (_multiSelectMode && !entry.isDirectory)
                       Icon(
-                        entry.isDirectory
-                            ? Icons.folder
-                            : _getFileIcon(entry.path),
-                        size: 22,
-                        color: entry.isDirectory
-                            ? Colors.amber
-                            : _getFileIconColor(entry.path),
+                        isLrc
+                            ? Icons.block
+                            : (isSelected
+                                  ? Icons.check_box
+                                  : Icons.check_box_outline_blank),
+                        size: 20,
+                        color: isLrc
+                            ? Theme.of(context).textTheme.bodySmall?.color
+                            : (isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.color),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    entry.name,
+                    if (_multiSelectMode && !entry.isDirectory)
+                      const SizedBox(width: 8),
+                    Icon(
+                      entry.isDirectory
+                          ? Icons.folder
+                          : _getFileIcon(entry.path),
+                      size: 22,
+                      color: entry.isDirectory
+                          ? Colors.amber
+                          : _getFileIconColor(entry.path),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  entry.name,
+                                  style: TextStyle(
+                                    fontFamily: 'MapleMono',
+                                    fontSize: 14,
+                                    fontWeight: isSelected && isSelectable
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.color,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (isLrc)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.teal.withAlpha(30),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    '歌词',
                                     style: TextStyle(
                                       fontFamily: 'MapleMono',
-                                      fontSize: 14,
-                                      fontWeight: isSelected && isSelectable
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      color: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium?.color,
+                                      fontSize: 10,
+                                      color: Colors.teal,
                                     ),
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                if (isLrc)
-                                  Container(
-                                    margin: const EdgeInsets.only(left: 6),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.teal.withAlpha(30),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text(
-                                      '歌词',
-                                      style: TextStyle(
-                                        fontFamily: 'MapleMono',
-                                        fontSize: 10,
-                                        color: Colors.teal,
-                                      ),
-                                    ),
+                            ],
+                          ),
+                          if (!entry.isDirectory)
+                            FutureBuilder<FileStat>(
+                              future: File(entry.path).stat(),
+                              builder: (context, snapshot) {
+                                final size = snapshot.data?.size ?? 0;
+                                return Text(
+                                  _formatFileSize(size),
+                                  style: TextStyle(
+                                    fontFamily: 'MapleMono',
+                                    fontSize: 11,
+                                    color: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.color,
                                   ),
-                              ],
+                                );
+                              },
                             ),
-                            if (!entry.isDirectory)
-                              FutureBuilder<FileStat>(
-                                future: File(entry.path).stat(),
-                                builder: (context, snapshot) {
-                                  final size = snapshot.data?.size ?? 0;
-                                  return Text(
-                                    _formatFileSize(size),
-                                    style: TextStyle(
-                                      fontFamily: 'MapleMono',
-                                      fontSize: 11,
-                                      color: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall?.color,
-                                    ),
-                                  );
-                                },
-                              ),
-                          ],
+                        ],
+                      ),
+                    ),
+                    if (!entry.isDirectory && isSelectable)
+                      GestureDetector(
+                        onTap: () => _showFileOptions(entry),
+                        child: const Padding(
+                          padding: EdgeInsets.all(4.0),
+                          child: Icon(Icons.more_vert, size: 18),
                         ),
                       ),
-                      if (!entry.isDirectory && isSelectable)
-                        GestureDetector(
-                          onTap: () => _showFileOptions(entry),
-                          child: const Padding(
-                            padding: EdgeInsets.all(4.0),
-                            child: Icon(Icons.more_vert, size: 18),
-                          ),
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -794,61 +735,52 @@ class _FilePageState extends State<FilePage> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         margin: const EdgeInsets.all(12.0),
-        child: LiquidGlassLayer(
+        child: GlassContainer(
+          useOwnLayer: true,
           settings: UIConfig.dialogSettings,
-          child: LiquidGlass.inLayer(
-            shape: const LiquidRoundedRectangle(
-              borderRadius: Radius.circular(20.0),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20.0),
-                color: Theme.of(ctx).colorScheme.surface.withAlpha(230),
-              ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withAlpha(150),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ListTile(
-                      leading: const Icon(Icons.edit),
-                      title: const Text(
-                        '重命名',
-                        style: TextStyle(fontFamily: 'MapleMono'),
-                      ),
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _renameFile(entry.path);
-                      },
-                    ),
-                    ListTile(
-                      leading: Icon(
-                        _selectedPaths.contains(entry.path)
-                            ? Icons.check_box
-                            : Icons.check_box_outline_blank,
-                      ),
-                      title: Text(
-                        _selectedPaths.contains(entry.path) ? '取消选择' : '选择',
-                        style: const TextStyle(fontFamily: 'MapleMono'),
-                      ),
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _toggleSelection(entry.path);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+          shape: const LiquidRoundedRectangle(borderRadius: 20.0),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withAlpha(150),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.edit),
+                  title: const Text(
+                    '重命名',
+                    style: TextStyle(fontFamily: 'MapleMono'),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _renameFile(entry.path);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    _selectedPaths.contains(entry.path)
+                        ? Icons.check_box
+                        : Icons.check_box_outline_blank,
+                  ),
+                  title: Text(
+                    _selectedPaths.contains(entry.path) ? '取消选择' : '选择',
+                    style: const TextStyle(fontFamily: 'MapleMono'),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _toggleSelection(entry.path);
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
           ),
         ),
@@ -859,50 +791,39 @@ class _FilePageState extends State<FilePage> {
   Widget _buildBottomBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, _bottomBarClearance),
-      child: LiquidGlassLayer(
+      child: GlassContainer(
+        useOwnLayer: true,
         settings: UIConfig.baseSettings,
-        child: LiquidGlass.inLayer(
-          shape: const LiquidRoundedRectangle(
-            borderRadius: Radius.circular(16.0),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 10.0,
+        shape: const LiquidRoundedRectangle(borderRadius: 16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+        child: Row(
+          children: [
+            Icon(
+              Icons.check_circle,
+              size: 20,
+              color: Theme.of(context).colorScheme.primary,
             ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16.0),
+            const SizedBox(width: 8),
+            Text(
+              '已选 ${_selectedPaths.length} 个文件',
+              style: TextStyle(
+                fontFamily: 'MapleMono',
+                fontSize: 13,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '已选 ${_selectedPaths.length} 个文件',
-                  style: TextStyle(
-                    fontFamily: 'MapleMono',
-                    fontSize: 13,
-                    color: Theme.of(context).textTheme.bodyMedium?.color,
-                  ),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    setState(() => _selectedPaths.clear());
-                    widget.onSelectionChanged([]);
-                  },
-                  child: const Text(
-                    '清除',
-                    style: TextStyle(fontFamily: 'MapleMono'),
-                  ),
-                ),
-              ],
+            const Spacer(),
+            TextButton(
+              onPressed: () {
+                setState(() => _selectedPaths.clear());
+                widget.onSelectionChanged([]);
+              },
+              child: const Text(
+                '清除',
+                style: TextStyle(fontFamily: 'MapleMono'),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
