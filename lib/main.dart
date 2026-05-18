@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' show pi;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -180,12 +181,15 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final sysBottom = MediaQuery.viewPaddingOf(context).bottom;
     return Scaffold(
+      extendBody: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           _buildBackground(),
           _buildPageContent(),
-          _buildFloatingNavBar(),
+          _buildFloatingNavBar(sysBottom),
           _buildTopButtons(),
         ],
       ),
@@ -224,78 +228,82 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildPageContent() {
+    final bottomPadding = 68.0 + MediaQuery.viewPaddingOf(context).bottom;
     return SafeArea(
-      child: IndexedStack(
-        index: _currentIndex,
-        children: [
-          FilePage(
-            selectedFiles: _selectedFiles,
-            onSelectionChanged: _onSelectionChanged,
-          ),
-          DropTarget(
-            onDragDone: (detail) {
-              final mp3Files = detail.files
-                  .where((f) => f.path.toLowerCase().endsWith('.mp3'))
-                  .map((f) => f.path)
-                  .toList();
-              if (mp3Files.isNotEmpty) {
-                setState(() => _selectedFiles = mp3Files);
-                _onTabChanged(1);
-              }
-            },
-            child: EditPage(filePaths: _selectedFiles),
-          ),
-          SettingsPage(),
-        ],
+      bottom: false,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottomPadding),
+        child: IndexedStack(
+          index: _currentIndex,
+          children: [
+            FilePage(
+              selectedFiles: _selectedFiles,
+              onSelectionChanged: _onSelectionChanged,
+            ),
+            DropTarget(
+              onDragDone: (detail) {
+                final audioExts = {
+                  '.mp3',
+                  '.flac',
+                  '.wav',
+                  '.aac',
+                  '.ogg',
+                  '.wma',
+                  '.m4a',
+                  '.opus',
+                  '.aiff',
+                  '.ape',
+                };
+                final audioFiles = detail.files
+                    .where((f) {
+                      final ext = f.path.toLowerCase();
+                      return audioExts.any((e) => ext.endsWith(e));
+                    })
+                    .map((f) => f.path)
+                    .toList();
+                if (audioFiles.isNotEmpty) {
+                  setState(() => _selectedFiles = audioFiles);
+                  _onTabChanged(1);
+                }
+              },
+              child: EditPage(filePaths: _selectedFiles),
+            ),
+            SettingsPage(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildFloatingNavBar() {
+  Widget _buildFloatingNavBar(double sysBottom) {
     return Positioned(
-      bottom: 16.0,
-      left: MediaQuery.of(context).size.width * 0.12,
-      right: MediaQuery.of(context).size.width * 0.12,
+      bottom: 8.0 + sysBottom,
+      left: MediaQuery.of(context).size.width * 0.06,
+      right: MediaQuery.of(context).size.width * 0.06,
       child: LiquidGlassLayer(
-        settings: UIConfig.largeButtonSettings,
+        settings: _navBarGlassSettings,
         child: LiquidGlass.inLayer(
           shape: const LiquidRoundedRectangle(
             borderRadius: Radius.circular(28.0),
           ),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 480),
+            height: 60,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(28.0),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(28.0),
-              child: BottomNavigationBar(
-                currentIndex: _currentIndex,
-                onTap: _onTabChanged,
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                selectedFontSize: 12,
-                unselectedFontSize: 11,
-                type: BottomNavigationBarType.fixed,
-                selectedItemColor: Theme.of(context).colorScheme.primary,
-                unselectedItemColor: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.color,
-                items: [
-                  BottomNavigationBarItem(
-                    icon: _buildNavIcon(Icons.folder_open, 0),
-                    label: '文件',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: _buildNavIcon(Icons.edit, 1),
-                    label: '编辑',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: _buildNavIcon(Icons.settings, 2),
-                    label: '设置',
-                  ),
-                ],
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildTabItem(
+                  Icons.folder_open_outlined,
+                  Icons.folder_open,
+                  '文件',
+                  0,
+                ),
+                _buildTabItem(Icons.edit_outlined, Icons.edit, '编辑', 1),
+                _buildTabItem(Icons.settings_outlined, Icons.settings, '设置', 2),
+              ],
             ),
           ),
         ),
@@ -303,15 +311,71 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildNavIcon(IconData icon, int index) {
+  static final _navBarGlassSettings = LiquidGlassSettings(
+    thickness: 6,
+    blur: 1.0,
+    lightAngle: 0.35 * pi,
+    lightIntensity: 0.45,
+    ambientStrength: 0.12,
+    blend: 0.3,
+    refractiveIndex: 1.15,
+    chromaticAberration: 0.08,
+    saturation: 1.04,
+  );
+
+  Widget _buildTabItem(
+    IconData outlinedIcon,
+    IconData filledIcon,
+    String label,
+    int index,
+  ) {
     final isSelected = _currentIndex == index;
-    return Icon(
-      icon,
-      size: isSelected ? 26 : 22,
-      color: isSelected
-          ? Theme.of(context).colorScheme.primary
-          : Theme.of(context).textTheme.bodySmall?.color,
+    return GestureDetector(
+      onTap: () => _onTabChanged(index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Colors.white.withValues(alpha: isDarkModeActive ? 0.18 : 0.14)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? filledIcon : outlinedIcon,
+              size: 28,
+              color: isSelected
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.65),
+            ),
+            const SizedBox(height: 1),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'MapleMono',
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.65),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  bool get isDarkModeActive {
+    if (widget.isDarkMode == null) {
+      return MediaQuery.of(context).platformBrightness == Brightness.dark;
+    }
+    return widget.isDarkMode!;
   }
 
   Widget _buildTopButtons() {

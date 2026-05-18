@@ -17,6 +17,8 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
+        allWarningsAsErrors = false
+        freeCompilerArgs += listOf("-Xjavac-arguments", "-Xlint:-deprecation") 
     }
 
     defaultConfig {

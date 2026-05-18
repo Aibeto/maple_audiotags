@@ -32,6 +32,40 @@ class _FilePageState extends State<FilePage> {
   bool _isLoading = false;
   bool _multiSelectMode = false;
 
+  static const _displayExts = {
+    '.mp3',
+    '.flac',
+    '.wav',
+    '.aac',
+    '.ogg',
+    '.wma',
+    '.m4a',
+    '.opus',
+    '.aiff',
+    '.ape',
+    '.lrc',
+  };
+
+  static const _selectableExts = {
+    '.mp3',
+    '.flac',
+    '.wav',
+    '.aac',
+    '.ogg',
+    '.wma',
+    '.m4a',
+    '.opus',
+    '.aiff',
+    '.ape',
+  };
+
+  bool _isSelectableExtension(String path) {
+    final ext = p.extension(path).toLowerCase();
+    return _selectableExts.contains(ext);
+  }
+
+  static const _bottomBarClearance = 12.0;
+
   String get _defaultRoot {
     if (Platform.isAndroid) {
       return '/sdcard';
@@ -69,12 +103,14 @@ class _FilePageState extends State<FilePage> {
 
   Future<bool> _requestStoragePermission() async {
     try {
-      final androidVersion = int.tryParse(
-        Platform.operatingSystemVersion
-            .replaceAll(RegExp(r'[^\d.]'), '')
-            .split('.')
-            .first,
-      ) ?? 0;
+      final androidVersion =
+          int.tryParse(
+            Platform.operatingSystemVersion
+                .replaceAll(RegExp(r'[^\d.]'), '')
+                .split('.')
+                .first,
+          ) ??
+          0;
 
       if (androidVersion >= 11) {
         var status = await Permission.manageExternalStorage.status;
@@ -114,31 +150,33 @@ class _FilePageState extends State<FilePage> {
         final bIsDir = b is Directory;
         if (aIsDir && !bIsDir) return -1;
         if (!aIsDir && bIsDir) return 1;
-        return p.basename(a.path).toLowerCase().compareTo(
-          p.basename(b.path).toLowerCase(),
-        );
+        return p
+            .basename(a.path)
+            .toLowerCase()
+            .compareTo(p.basename(b.path).toLowerCase());
       });
 
-      final allowedExts = ['.mp3', '.lrc'];
-
-      _entries = entities.where((e) {
-        if (e is Directory) {
-          final name = p.basename(e.path);
-          return !name.startsWith('.');
-        }
-        if (e is File) {
-          final ext = p.extension(e.path).toLowerCase();
-          return allowedExts.contains(ext);
-        }
-        return false;
-      }).map((e) {
-        final isDir = e is Directory;
-        return _FileEntry(
-          path: e.path,
-          name: p.basename(e.path),
-          isDirectory: isDir,
-        );
-      }).toList();
+      _entries = entities
+          .where((e) {
+            if (e is Directory) {
+              final name = p.basename(e.path);
+              return !name.startsWith('.');
+            }
+            if (e is File) {
+              final ext = p.extension(e.path).toLowerCase();
+              return _displayExts.contains(ext);
+            }
+            return false;
+          })
+          .map((e) {
+            final isDir = e is Directory;
+            return _FileEntry(
+              path: e.path,
+              name: p.basename(e.path),
+              isDirectory: isDir,
+            );
+          })
+          .toList();
 
       setState(() => _isLoading = false);
     } catch (e) {
@@ -167,6 +205,10 @@ class _FilePageState extends State<FilePage> {
   }
 
   void _toggleSelection(String path) {
+    if (!_isSelectableExtension(path)) {
+      Fluttertoast.showToast(msg: 'LRC 歌词文件不可选中');
+      return;
+    }
     setState(() {
       if (_multiSelectMode) {
         if (_selectedPaths.contains(path)) {
@@ -195,7 +237,7 @@ class _FilePageState extends State<FilePage> {
   void _selectAll() {
     setState(() {
       for (final entry in _entries) {
-        if (!entry.isDirectory) {
+        if (!entry.isDirectory && _isSelectableExtension(entry.path)) {
           _selectedPaths.add(entry.path);
         }
       }
@@ -278,13 +320,19 @@ class _FilePageState extends State<FilePage> {
                       children: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx),
-                          child: const Text('取消', style: TextStyle(fontFamily: 'MapleMono')),
+                          child: const Text(
+                            '取消',
+                            style: TextStyle(fontFamily: 'MapleMono'),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         TextButton(
                           onPressed: () =>
                               Navigator.pop(ctx, controller.text.trim()),
-                          child: const Text('确定', style: TextStyle(fontFamily: 'MapleMono')),
+                          child: const Text(
+                            '确定',
+                            style: TextStyle(fontFamily: 'MapleMono'),
+                          ),
                         ),
                       ],
                     ),
@@ -336,7 +384,10 @@ class _FilePageState extends State<FilePage> {
   }
 
   Widget _buildPathBar() {
-    final parts = _currentDir.split(Platform.pathSeparator).where((p) => p.isNotEmpty).toList();
+    final parts = _currentDir
+        .split(Platform.pathSeparator)
+        .where((p) => p.isNotEmpty)
+        .toList();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
@@ -347,7 +398,10 @@ class _FilePageState extends State<FilePage> {
             borderRadius: Radius.circular(12.0),
           ),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12.0,
+              vertical: 8.0,
+            ),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12.0),
             ),
@@ -377,7 +431,8 @@ class _FilePageState extends State<FilePage> {
                         for (int i = 0; i < parts.length; i++)
                           GestureDetector(
                             onTap: () {
-                              final subPath = '/${parts.sublist(0, i + 1).join('/')}';
+                              final subPath =
+                                  '/${parts.sublist(0, i + 1).join('/')}';
                               _navigateTo(subPath);
                             },
                             child: Text(
@@ -386,7 +441,9 @@ class _FilePageState extends State<FilePage> {
                                 fontFamily: 'MapleMono',
                                 fontSize: 13,
                                 color: i == parts.length - 1
-                                    ? Theme.of(context).textTheme.bodyMedium?.color
+                                    ? Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium?.color
                                     : Theme.of(context).colorScheme.primary,
                               ),
                             ),
@@ -418,7 +475,10 @@ class _FilePageState extends State<FilePage> {
                 onTap: _toggleMultiSelectMode,
                 borderRadius: BorderRadius.circular(8.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10.0,
+                    vertical: 6.0,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8.0),
                   ),
@@ -426,13 +486,18 @@ class _FilePageState extends State<FilePage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        _multiSelectMode ? Icons.check_box : Icons.check_box_outline_blank,
+                        _multiSelectMode
+                            ? Icons.check_box
+                            : Icons.check_box_outline_blank,
                         size: 18,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         _multiSelectMode ? '取消多选' : '多选',
-                        style: const TextStyle(fontFamily: 'MapleMono', fontSize: 12),
+                        style: const TextStyle(
+                          fontFamily: 'MapleMono',
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -452,7 +517,10 @@ class _FilePageState extends State<FilePage> {
                   onTap: _selectAll,
                   borderRadius: BorderRadius.circular(8.0),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10.0,
+                      vertical: 6.0,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8.0),
                     ),
@@ -461,7 +529,13 @@ class _FilePageState extends State<FilePage> {
                       children: [
                         Icon(Icons.select_all, size: 18),
                         SizedBox(width: 4),
-                        Text('全选', style: TextStyle(fontFamily: 'MapleMono', fontSize: 12)),
+                        Text(
+                          '全选',
+                          style: TextStyle(
+                            fontFamily: 'MapleMono',
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -479,7 +553,10 @@ class _FilePageState extends State<FilePage> {
                   onTap: _deselectAll,
                   borderRadius: BorderRadius.circular(8.0),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10.0,
+                      vertical: 6.0,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8.0),
                     ),
@@ -488,7 +565,13 @@ class _FilePageState extends State<FilePage> {
                       children: [
                         Icon(Icons.deselect, size: 18),
                         SizedBox(width: 4),
-                        Text('全不选', style: TextStyle(fontFamily: 'MapleMono', fontSize: 12)),
+                        Text(
+                          '全不选',
+                          style: TextStyle(
+                            fontFamily: 'MapleMono',
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -509,7 +592,7 @@ class _FilePageState extends State<FilePage> {
     if (_entries.isEmpty) {
       return Center(
         child: Text(
-          '此目录下没有 mp3 或 lrc 文件',
+          '此目录下没有支持的音频或歌词文件',
           style: TextStyle(
             fontFamily: 'MapleMono',
             color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -530,98 +613,152 @@ class _FilePageState extends State<FilePage> {
   }
 
   Widget _buildFileTile(_FileEntry entry, bool isSelected) {
+    final isSelectable = _isSelectableExtension(entry.path);
+    final isLrc = p.extension(entry.path).toLowerCase() == '.lrc';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 2.0),
-      child: LiquidGlassLayer(
-        settings: UIConfig.smallButtonSettings,
-        child: LiquidGlass.inLayer(
-          shape: LiquidRoundedRectangle(
-            borderRadius: const Radius.circular(10.0),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10.0),
-              onTap: () {
-                if (entry.isDirectory) {
-                  _navigateTo(entry.path);
-                } else {
-                  _toggleSelection(entry.path);
-                }
-              },
-              onLongPress: () {
-                if (!entry.isDirectory) {
-                  _showFileOptions(entry);
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10.0),
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary.withAlpha(30)
-                      : Colors.transparent,
-                ),
-                child: Row(
-                  children: [
-                    if (_multiSelectMode && !entry.isDirectory)
+      child: Opacity(
+        opacity: isLrc ? 0.5 : 1.0,
+        child: LiquidGlassLayer(
+          settings: UIConfig.smallButtonSettings,
+          child: LiquidGlass.inLayer(
+            shape: LiquidRoundedRectangle(
+              borderRadius: const Radius.circular(10.0),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10.0),
+                onTap: () {
+                  if (entry.isDirectory) {
+                    _navigateTo(entry.path);
+                  } else if (isSelectable) {
+                    _toggleSelection(entry.path);
+                  } else {
+                    Fluttertoast.showToast(msg: 'LRC 歌词文件不可选中');
+                  }
+                },
+                onLongPress: () {
+                  if (!entry.isDirectory && isSelectable) {
+                    _showFileOptions(entry);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12.0,
+                    vertical: 10.0,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10.0),
+                    color: isSelected && isSelectable
+                        ? Theme.of(context).colorScheme.primary.withAlpha(30)
+                        : Colors.transparent,
+                  ),
+                  child: Row(
+                    children: [
+                      if (_multiSelectMode && !entry.isDirectory)
+                        Icon(
+                          isLrc
+                              ? Icons.block
+                              : (isSelected
+                                    ? Icons.check_box
+                                    : Icons.check_box_outline_blank),
+                          size: 20,
+                          color: isLrc
+                              ? Theme.of(context).textTheme.bodySmall?.color
+                              : (isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall?.color),
+                        ),
+                      if (_multiSelectMode && !entry.isDirectory)
+                        const SizedBox(width: 8),
                       Icon(
-                        isSelected ? Icons.check_box : Icons.check_box_outline_blank,
-                        size: 20,
-                        color: isSelected
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).textTheme.bodySmall?.color,
+                        entry.isDirectory
+                            ? Icons.folder
+                            : _getFileIcon(entry.path),
+                        size: 22,
+                        color: entry.isDirectory
+                            ? Colors.amber
+                            : _getFileIconColor(entry.path),
                       ),
-                    if (_multiSelectMode && !entry.isDirectory) const SizedBox(width: 8),
-                    Icon(
-                      entry.isDirectory ? Icons.folder : _getFileIcon(entry.path),
-                      size: 22,
-                      color: entry.isDirectory
-                          ? Colors.amber
-                          : _getFileIconColor(entry.path),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            entry.name,
-                            style: TextStyle(
-                              fontFamily: 'MapleMono',
-                              fontSize: 14,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: Theme.of(context).textTheme.bodyMedium?.color,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (!entry.isDirectory)
-                            FutureBuilder<FileStat>(
-                              future: File(entry.path).stat(),
-                              builder: (context, snapshot) {
-                                final size = snapshot.data?.size ?? 0;
-                                return Text(
-                                  _formatFileSize(size),
-                                  style: TextStyle(
-                                    fontFamily: 'MapleMono',
-                                    fontSize: 11,
-                                    color: Theme.of(context).textTheme.bodySmall?.color,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    entry.name,
+                                    style: TextStyle(
+                                      fontFamily: 'MapleMono',
+                                      fontSize: 14,
+                                      fontWeight: isSelected && isSelectable
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium?.color,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                );
-                              },
+                                ),
+                                if (isLrc)
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal.withAlpha(30),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      '歌词',
+                                      style: TextStyle(
+                                        fontFamily: 'MapleMono',
+                                        fontSize: 10,
+                                        color: Colors.teal,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                        ],
-                      ),
-                    ),
-                    if (!entry.isDirectory)
-                      GestureDetector(
-                        onTap: () => _showFileOptions(entry),
-                        child: const Padding(
-                          padding: EdgeInsets.all(4.0),
-                          child: Icon(Icons.more_vert, size: 18),
+                            if (!entry.isDirectory)
+                              FutureBuilder<FileStat>(
+                                future: File(entry.path).stat(),
+                                builder: (context, snapshot) {
+                                  final size = snapshot.data?.size ?? 0;
+                                  return Text(
+                                    _formatFileSize(size),
+                                    style: TextStyle(
+                                      fontFamily: 'MapleMono',
+                                      fontSize: 11,
+                                      color: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall?.color,
+                                    ),
+                                  );
+                                },
+                              ),
+                          ],
                         ),
                       ),
-                  ],
+                      if (!entry.isDirectory && isSelectable)
+                        GestureDetector(
+                          onTap: () => _showFileOptions(entry),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4.0),
+                            child: Icon(Icons.more_vert, size: 18),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -634,12 +771,20 @@ class _FilePageState extends State<FilePage> {
   IconData _getFileIcon(String path) {
     final ext = p.extension(path).toLowerCase();
     if (ext == '.lrc') return Icons.lyrics;
+    if (ext == '.flac') return Icons.multitrack_audio;
+    if (ext == '.wav' || ext == '.aiff') return Icons.graphic_eq;
     return Icons.audio_file;
   }
 
   Color _getFileIconColor(String path) {
     final ext = p.extension(path).toLowerCase();
     if (ext == '.lrc') return Colors.teal;
+    if (ext == '.flac') return Colors.deepPurple;
+    if (ext == '.wav' || ext == '.aiff') return Colors.orange;
+    if (ext == '.ogg' || ext == '.opus') return Colors.amber;
+    if (ext == '.aac' || ext == '.m4a') return Colors.green;
+    if (ext == '.wma') return Colors.red;
+    if (ext == '.ape') return Colors.brown;
     return Colors.blue;
   }
 
@@ -676,7 +821,10 @@ class _FilePageState extends State<FilePage> {
                     const SizedBox(height: 16),
                     ListTile(
                       leading: const Icon(Icons.edit),
-                      title: const Text('重命名', style: TextStyle(fontFamily: 'MapleMono')),
+                      title: const Text(
+                        '重命名',
+                        style: TextStyle(fontFamily: 'MapleMono'),
+                      ),
                       onTap: () {
                         Navigator.pop(ctx);
                         _renameFile(entry.path);
@@ -710,7 +858,7 @@ class _FilePageState extends State<FilePage> {
 
   Widget _buildBottomBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, 8.0),
+      padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, _bottomBarClearance),
       child: LiquidGlassLayer(
         settings: UIConfig.baseSettings,
         child: LiquidGlass.inLayer(
@@ -718,7 +866,10 @@ class _FilePageState extends State<FilePage> {
             borderRadius: Radius.circular(16.0),
           ),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 10.0,
+            ),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16.0),
             ),
@@ -744,7 +895,10 @@ class _FilePageState extends State<FilePage> {
                     setState(() => _selectedPaths.clear());
                     widget.onSelectionChanged([]);
                   },
-                  child: const Text('清除', style: TextStyle(fontFamily: 'MapleMono')),
+                  child: const Text(
+                    '清除',
+                    style: TextStyle(fontFamily: 'MapleMono'),
+                  ),
                 ),
               ],
             ),
