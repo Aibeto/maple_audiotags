@@ -314,7 +314,7 @@ class _FilePageState extends State<FilePage> {
             ),
             child: GlassContainer(
               useOwnLayer: true,
-              settings: UIConfig.dialogSettings,
+              settings: UIConfig.compact,
               shape: const LiquidRoundedRectangle(borderRadius: 20.0),
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -433,7 +433,7 @@ class _FilePageState extends State<FilePage> {
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
       child: GlassContainer(
         useOwnLayer: true,
-        settings: UIConfig.smallButtonSettings,
+        settings: UIConfig.compact,
         shape: const LiquidRoundedRectangle(borderRadius: 12.0),
         padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
         child: Row(
@@ -495,7 +495,7 @@ class _FilePageState extends State<FilePage> {
         children: [
           GlassContainer(
             useOwnLayer: true,
-            settings: UIConfig.smallButtonSettings,
+            settings: UIConfig.compact,
             shape: const LiquidRoundedRectangle(borderRadius: 8.0),
             padding: const EdgeInsets.symmetric(
               horizontal: 10.0,
@@ -529,7 +529,7 @@ class _FilePageState extends State<FilePage> {
             const SizedBox(width: 8),
             GlassContainer(
               useOwnLayer: true,
-              settings: UIConfig.smallButtonSettings,
+              settings: UIConfig.compact,
               shape: const LiquidRoundedRectangle(borderRadius: 8.0),
               padding: const EdgeInsets.symmetric(
                 horizontal: 10.0,
@@ -554,7 +554,7 @@ class _FilePageState extends State<FilePage> {
             const SizedBox(width: 8),
             GlassContainer(
               useOwnLayer: true,
-              settings: UIConfig.smallButtonSettings,
+              settings: UIConfig.compact,
               shape: const LiquidRoundedRectangle(borderRadius: 8.0),
               padding: const EdgeInsets.symmetric(
                 horizontal: 10.0,
@@ -624,7 +624,7 @@ class _FilePageState extends State<FilePage> {
         opacity: isLrc ? 0.5 : 1.0,
         child: GlassContainer(
           useOwnLayer: true,
-          settings: UIConfig.smallButtonSettings,
+          settings: UIConfig.compact,
           shape: const LiquidRoundedRectangle(borderRadius: 10.0),
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
           child: ColoredBox(
@@ -795,7 +795,7 @@ class _FilePageState extends State<FilePage> {
         margin: const EdgeInsets.all(12.0),
         child: GlassContainer(
           useOwnLayer: true,
-          settings: UIConfig.dialogSettings,
+          settings: UIConfig.compact,
           shape: const LiquidRoundedRectangle(borderRadius: 20.0),
           child: SafeArea(
             child: Column(
@@ -852,7 +852,7 @@ class _FilePageState extends State<FilePage> {
       padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, _bottomBarClearance),
       child: GlassContainer(
         useOwnLayer: true,
-        settings: UIConfig.baseSettings,
+        settings: UIConfig.base,
         shape: const LiquidRoundedRectangle(borderRadius: 16.0),
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
         child: Row(

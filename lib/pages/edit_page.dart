@@ -113,7 +113,7 @@ class _EditPageState extends State<EditPage> {
         children: [
           GlassContainer(
             useOwnLayer: true,
-            settings: UIConfig.fileSelectorSettings,
+            settings: UIConfig.subtle,
             shape: const LiquidRoundedRectangle(borderRadius: 28.0),
             padding: const EdgeInsets.symmetric(
               horizontal: 24.0,

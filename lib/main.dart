@@ -20,7 +20,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 
 // 导入项目内部模块
-import 'config/ui_config.dart';
 import 'pages/file_page.dart';
 import 'pages/edit_page.dart';
 import 'pages/settings_page.dart';
@@ -57,11 +56,11 @@ Future<void> _clearCacheDirectory() async {
 /// 应用程序主函数
 /// 负责初始化 Flutter 框架、清理缓存、读取主题设置并启动应用
 void main() async {
-  // 确保 Flutter 绑定已初始化，必须在调用异步方法前执行
   WidgetsFlutterBinding.ensureInitialized();
 
+  await LiquidGlassWidgets.initialize();
+
   try {
-    // 仅在 Android 平台清理缓存
     if (Platform.isAndroid) {
       await _clearCacheDirectory();
     }
@@ -71,11 +70,10 @@ void main() async {
     }
   }
 
-  // 从 SharedPreferences 读取用户主题设置
   SharedPreferences prefs = await SharedPreferences.getInstance();
   bool? isDarkMode = prefs.getBool('isDarkMode');
-  // 启动应用并传入初始主题设置
-  runApp(MyApp(initialIsDarkMode: isDarkMode));
+
+  runApp(LiquidGlassWidgets.wrap(child: MyApp(initialIsDarkMode: isDarkMode)));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,21 +101,26 @@ class _MyAppState extends State<MyApp> {
   bool? _isDarkMode;
 
   /// 切换主题函数
-  /// 在浅色 → 深色 → 跟随系统 三种模式间循环切换
-  void _toggleTheme() async {
+  /// 如果提供了 newMode，直接设置为该模式
+  /// 否则在浅色 → 深色 → 跟随系统 三种模式间循环切换
+  void _toggleTheme([bool? newMode]) async {
     // 获取 SharedPreferences 实例
     SharedPreferences prefs = await SharedPreferences.getInstance();
     // 更新状态并触发 UI 重建
     setState(() {
-      if (_isDarkMode == null) {
-        // 当前是跟随系统，切换到浅色
-        _isDarkMode = false;
-      } else if (_isDarkMode == false) {
-        // 当前是浅色，切换到深色
-        _isDarkMode = true;
+      if (newMode != null) {
+        _isDarkMode = newMode;
       } else {
-        // 当前是深色，切换到跟随系统
-        _isDarkMode = null;
+        if (_isDarkMode == null) {
+          // 当前是跟随系统，切换到浅色
+          _isDarkMode = false;
+        } else if (_isDarkMode == false) {
+          // 当前是浅色，切换到深色
+          _isDarkMode = true;
+        } else {
+          // 当前是深色，切换到跟随系统
+          _isDarkMode = null;
+        }
       }
     });
     // 保存用户选择到本地存储
@@ -137,43 +140,67 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // 使用 DynamicColorBuilder 支持 Android 12+ 的动态颜色主题
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        // 根据 _isDarkMode 的值确定当前主题模式
         ThemeMode themeMode = _isDarkMode == null
             ? ThemeMode.system
             : (_isDarkMode! ? ThemeMode.dark : ThemeMode.light);
 
-        // 返回 MaterialApp，配置主题和路由
-        return MaterialApp(
-          title: '枫糖标签',
-          themeMode: themeMode,
-          // 浅色主题配置
-          theme: ThemeData(
-            useMaterial3: true,
-            fontFamily: 'MapleMono',
-            colorScheme:
-                lightDynamic ??
-                ColorScheme.fromSeed(
-                  seedColor: Colors.blue,
-                  brightness: Brightness.light,
-                ),
+        return GlassTheme(
+          data: GlassThemeData(
+            light: GlassThemeVariant(
+              settings: const GlassThemeSettings(
+                thickness: 30,
+                blur: 12,
+                specularSharpness: GlassSpecularSharpness.medium,
+              ),
+              quality: GlassQuality.standard,
+              glowColors: const GlassGlowColors(
+                primary: Colors.blue,
+                glowBlurRadius: 12,
+                glowOpacity: 0.8,
+              ),
+            ),
+            dark: GlassThemeVariant(
+              settings: const GlassThemeSettings(
+                thickness: 50,
+                blur: 18,
+                specularSharpness: GlassSpecularSharpness.medium,
+              ),
+              quality: GlassQuality.premium,
+              glowColors: const GlassGlowColors(
+                primary: Colors.blue,
+                glowBlurRadius: 12,
+                glowOpacity: 0.8,
+              ),
+            ),
           ),
-          // 深色主题配置
-          darkTheme: ThemeData(
-            useMaterial3: true,
-            fontFamily: 'MapleMono',
-            colorScheme:
-                darkDynamic ??
-                ColorScheme.fromSeed(
-                  seedColor: Colors.blue,
-                  brightness: Brightness.dark,
-                ),
-            scaffoldBackgroundColor: Colors.black,
+          child: MaterialApp(
+            title: '枫糖标签',
+            themeMode: themeMode,
+            theme: ThemeData(
+              useMaterial3: true,
+              fontFamily: 'MapleMono',
+              colorScheme:
+                  lightDynamic ??
+                  ColorScheme.fromSeed(
+                    seedColor: Colors.blue,
+                    brightness: Brightness.light,
+                  ),
+            ),
+            darkTheme: ThemeData(
+              useMaterial3: true,
+              fontFamily: 'MapleMono',
+              colorScheme:
+                  darkDynamic ??
+                  ColorScheme.fromSeed(
+                    seedColor: Colors.blue,
+                    brightness: Brightness.dark,
+                  ),
+              scaffoldBackgroundColor: Colors.black,
+            ),
+            home: HomePage(isDarkMode: _isDarkMode, toggleTheme: _toggleTheme),
           ),
-          // 应用主页
-          home: HomePage(isDarkMode: _isDarkMode, toggleTheme: _toggleTheme),
         );
       },
     );
@@ -191,7 +218,7 @@ class HomePage extends StatefulWidget {
   final bool? isDarkMode;
 
   /// 切换主题回调函数
-  final VoidCallback toggleTheme;
+  final void Function([bool?]) toggleTheme;
 
   /// 构造函数
   const HomePage({
@@ -270,32 +297,24 @@ class _HomePageState extends State<HomePage> {
       extendBody: true,
       // 避免键盘弹出时调整布局（影响玻璃效果）
       resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [_buildBackground(), _buildPageContent(), _buildTopButtons()],
-      ),
+      body: Stack(children: [_buildBackground(), _buildPageContent()]),
       // 液态玻璃效果的底部导航栏
       bottomNavigationBar: GlassBottomBar(
         tabs: [
-          // 文件页面标签
           GlassBottomBarTab(
             label: '文件',
             icon: const Icon(Icons.folder_open_outlined),
             activeIcon: const Icon(Icons.folder_open),
-            glowColor: Colors.blue,
           ),
-          // 编辑页面标签
           GlassBottomBarTab(
             label: '编辑',
             icon: const Icon(Icons.edit_outlined),
             activeIcon: const Icon(Icons.edit),
-            glowColor: Colors.orange,
           ),
-          // 设置页面标签
           GlassBottomBarTab(
             label: '设置',
             icon: const Icon(Icons.settings_outlined),
             activeIcon: const Icon(Icons.settings),
-            glowColor: Colors.grey,
           ),
         ],
         selectedIndex: _currentIndex,
@@ -393,54 +412,11 @@ class _HomePageState extends State<HomePage> {
             child: EditPage(filePaths: _selectedFiles),
           ),
           // 设置页面
-          SettingsPage(),
-        ],
-      ),
-    );
-  }
-
-  /// 构建顶部按钮层
-  /// 包含主题切换按钮
-  Widget _buildTopButtons() {
-    return Positioned(
-      // 定位到安全区域顶部
-      top: MediaQuery.of(context).padding.top + 0,
-      right: 12.0,
-      child: GlassContainer(
-        useOwnLayer: true,
-        settings: UIConfig.smallButtonSettings,
-        shape: const LiquidRoundedRectangle(borderRadius: 20.0),
-        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            // 点击切换主题
-            onTap: widget.toggleTheme,
-            borderRadius: BorderRadius.circular(20.0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 根据当前主题显示对应图标
-                Icon(
-                  widget.isDarkMode == null
-                      ? Icons.auto_mode
-                      : (widget.isDarkMode!
-                            ? Icons.dark_mode
-                            : Icons.light_mode),
-                  size: 18,
-                ),
-                const SizedBox(width: 4),
-                // 显示当前主题模式文字
-                Text(
-                  widget.isDarkMode == null
-                      ? '跟随系统'
-                      : (widget.isDarkMode! ? '深色' : '浅色'),
-                  style: const TextStyle(fontFamily: 'MapleMono', fontSize: 12),
-                ),
-              ],
-            ),
+          SettingsPage(
+            isDarkMode: widget.isDarkMode,
+            onThemeChanged: widget.toggleTheme,
           ),
-        ),
+        ],
       ),
     );
   }

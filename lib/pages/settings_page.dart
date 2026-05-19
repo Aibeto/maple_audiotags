@@ -1,15 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
-import '../config/ui_config.dart';
 import 'apple_news_demo_page.dart';
 
-/// 设置页面
-/// 显示应用的设置选项，包括"关于"和"Apple News Demo"
-class SettingsPage extends StatelessWidget {
-  /// 构造函数
-  const SettingsPage({super.key});
+class SettingsPage extends StatefulWidget {
+  /// 当前的主题状态
+  final bool? isDarkMode;
 
+  /// 主题切换回调
+  final void Function(bool?) onThemeChanged;
+
+  /// 构造函数
+  const SettingsPage({
+    super.key,
+    required this.isDarkMode,
+    required this.onThemeChanged,
+  });
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -17,14 +29,64 @@ class SettingsPage extends StatelessWidget {
         const SizedBox(height: 24),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: GlassContainer(
-            useOwnLayer: true,
-            settings: UIConfig.baseSettings,
-            shape: const LiquidRoundedRectangle(borderRadius: 16.0),
-            width: double.infinity,
+          child: GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '主题设置',
+                  style: TextStyle(
+                    fontFamily: 'MapleMono',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '选择您喜欢的外观',
+                  style: TextStyle(
+                    fontFamily: 'MapleMono',
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GlassSegmentedControl(
+                  segments: const ['跟随系统', '浅色', '深色'],
+                  selectedIndex: widget.isDarkMode == null
+                      ? 0
+                      : (widget.isDarkMode! ? 2 : 1),
+                  onSegmentSelected: (index) {
+                    bool? newMode;
+                    if (index == 0) {
+                      newMode = null;
+                    } else if (index == 1) {
+                      newMode = false;
+                    } else {
+                      newMode = true;
+                    }
+                    widget.onThemeChanged(newMode);
+                  },
+                  useOwnLayer: true,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '当前: ${widget.isDarkMode == null ? '跟随系统' : (widget.isDarkMode! ? '深色' : '浅色')}',
+                  style: TextStyle(
+                    fontFamily: 'MapleMono',
+                    fontSize: 14,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: GlassCard(
             child: Column(
               children: [
-                // 关于按钮
                 ListTile(
                   leading: const Icon(Icons.info_outline),
                   title: const Text(
@@ -34,7 +96,6 @@ class SettingsPage extends StatelessWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _showAboutDialog(context),
                 ),
-                // Apple News Demo 按钮
                 ListTile(
                   leading: const Icon(Icons.newspaper),
                   title: const Text(
@@ -73,7 +134,6 @@ class SettingsPage extends StatelessWidget {
           ),
           child: GlassContainer(
             useOwnLayer: true,
-            settings: UIConfig.dialogSettings,
             shape: const LiquidRoundedRectangle(borderRadius: 20.0),
             padding: const EdgeInsets.all(24.0),
             child: Column(

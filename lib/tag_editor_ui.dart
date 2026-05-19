@@ -136,7 +136,7 @@ class _TagEditorUIState extends State<TagEditorUI>
           Positioned.fill(
             child: GlassContainer(
               useOwnLayer: true,
-              settings: UIConfig.baseSettings,
+              settings: UIConfig.base,
               shape: const LiquidRoundedRectangle(borderRadius: 12.0),
               child: Container(
                 color: Theme.of(context).brightness == Brightness.dark
@@ -184,7 +184,7 @@ class _TagEditorUIState extends State<TagEditorUI>
           Positioned.fill(
             child: GlassContainer(
               useOwnLayer: true,
-              settings: UIConfig.baseSettings,
+              settings: UIConfig.base,
               shape: const LiquidRoundedRectangle(borderRadius: 12.0),
               child: Container(
                 color: Theme.of(context).brightness == Brightness.dark
@@ -426,7 +426,7 @@ class _TagEditorUIState extends State<TagEditorUI>
     return Center(
       child: GlassContainer(
         useOwnLayer: true,
-        settings: UIConfig.dialogSettings,
+        settings: UIConfig.compact,
         shape: const LiquidRoundedRectangle(borderRadius: 20.0),
         child: Container(
           decoration: BoxDecoration(
@@ -1851,7 +1851,7 @@ class _TagEditorUIState extends State<TagEditorUI>
                     Positioned.fill(
                       child: GlassContainer(
                         useOwnLayer: true,
-                        settings: UIConfig.baseSettings,
+                        settings: UIConfig.base,
                         shape: const LiquidRoundedRectangle(borderRadius: 12.0),
                         child: Container(
                           decoration: BoxDecoration(
@@ -2404,7 +2404,7 @@ class _TagEditorUIState extends State<TagEditorUI>
                 // 还原更改按钮
                 GlassContainer(
                   useOwnLayer: true,
-                  settings: UIConfig.largeButtonSettings,
+                  settings: UIConfig.prominent,
                   shape: const LiquidRoundedRectangle(borderRadius: 20.0),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12.0,
@@ -2440,7 +2440,7 @@ class _TagEditorUIState extends State<TagEditorUI>
                 // 保存按钮
                 GlassContainer(
                   useOwnLayer: true,
-                  settings: UIConfig.largeButtonSettings,
+                  settings: UIConfig.prominent,
                   shape: const LiquidRoundedRectangle(borderRadius: 20.0),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12.0,
