@@ -30,6 +30,7 @@ class _SettingsPageState extends State<SettingsPage> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: GlassCard(
+            useOwnLayer: true,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -85,6 +86,7 @@ class _SettingsPageState extends State<SettingsPage> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: GlassCard(
+            useOwnLayer: true,
             child: Column(
               children: [
                 ListTile(
