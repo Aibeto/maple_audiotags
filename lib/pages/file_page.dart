@@ -88,18 +88,134 @@ class _FilePageState extends State<FilePage> {
   /// 底部栏的额外间距
   static const _bottomBarClearance = 12.0;
 
+  /// 特殊根目录标识，用于 Windows 显示所有盘符和固定项
+  static const _winRoot = '::WIN_ROOT::';
+
   /// 获取默认的根目录路径，根据平台不同返回不同路径
   String get _defaultRoot {
     if (Platform.isAndroid) {
       return '/sdcard';
     }
     if (Platform.isWindows) {
-      return Platform.environment['USERPROFILE'] ?? 'C:\\';
+      return _winRoot;
     }
     if (Platform.isMacOS || Platform.isLinux) {
       return Platform.environment['HOME'] ?? '/';
     }
     return '/';
+  }
+
+  /// 获取 Windows 系统所有可用驱动器列表
+  List<String> _getWindowsDrives() {
+    // 常见的 Windows 驱动器字母
+    const possibleDrives = [
+      'A:',
+      'B:',
+      'C:',
+      'D:',
+      'E:',
+      'F:',
+      'G:',
+      'H:',
+      'I:',
+      'J:',
+      'K:',
+      'L:',
+      'M:',
+      'N:',
+      'O:',
+      'P:',
+      'Q:',
+      'R:',
+      'S:',
+      'T:',
+      'U:',
+      'V:',
+      'W:',
+      'X:',
+      'Y:',
+      'Z:',
+    ];
+    final drives = <String>[];
+    for (final drive in possibleDrives) {
+      try {
+        if (Directory('$drive\\').existsSync()) {
+          drives.add('$drive\\');
+        }
+      } catch (e) {
+        // 忽略不可访问的驱动器
+      }
+    }
+    return drives;
+  }
+
+  /// 获取 Windows 系统常用固定项（桌面、文档、下载等）
+  List<_FileEntry> _getWindowsQuickAccessItems() {
+    final items = <_FileEntry>[];
+    final profileDir = Platform.environment['USERPROFILE'];
+
+    // 桌面
+    if (profileDir != null) {
+      final desktopPath = p.join(profileDir, 'Desktop');
+      if (Directory(desktopPath).existsSync()) {
+        items.add(
+          const _FileEntry(path: '::DESKTOP::', name: '桌面', isDirectory: true),
+        );
+      }
+
+      // 文档
+      final docsPath = p.join(profileDir, 'Documents');
+      if (Directory(docsPath).existsSync()) {
+        items.add(
+          const _FileEntry(
+            path: '::DOCUMENTS::',
+            name: '文档',
+            isDirectory: true,
+          ),
+        );
+      }
+
+      // 下载
+      final downloadsPath = p.join(profileDir, 'Downloads');
+      if (Directory(downloadsPath).existsSync()) {
+        items.add(
+          const _FileEntry(
+            path: '::DOWNLOADS::',
+            name: '下载',
+            isDirectory: true,
+          ),
+        );
+      }
+
+      // 音乐
+      final musicPath = p.join(profileDir, 'Music');
+      if (Directory(musicPath).existsSync()) {
+        items.add(
+          const _FileEntry(path: '::MUSIC::', name: '音乐', isDirectory: true),
+        );
+      }
+    }
+
+    return items;
+  }
+
+  /// 将特殊路径标识转换为真实路径
+  String _resolveSpecialPath(String path) {
+    final profileDir = Platform.environment['USERPROFILE'];
+    if (profileDir == null) return path;
+
+    switch (path) {
+      case '::DESKTOP::':
+        return p.join(profileDir, 'Desktop');
+      case '::DOCUMENTS::':
+        return p.join(profileDir, 'Documents');
+      case '::DOWNLOADS::':
+        return p.join(profileDir, 'Downloads');
+      case '::MUSIC::':
+        return p.join(profileDir, 'Music');
+      default:
+        return path;
+    }
   }
 
   @override
@@ -164,6 +280,21 @@ class _FilePageState extends State<FilePage> {
     setState(() => _isLoading = true);
 
     try {
+      // Windows 特殊根目录：显示固定项和所有驱动器
+      if (Platform.isWindows && _currentDir == _winRoot) {
+        final quickAccess = _getWindowsQuickAccessItems();
+        final drives = _getWindowsDrives();
+
+        final driveEntries = drives.map((drive) {
+          final driveLetter = drive.substring(0, 2); // 如 "C:"
+          return _FileEntry(path: drive, name: driveLetter, isDirectory: true);
+        }).toList();
+
+        _entries = [...quickAccess, ...driveEntries];
+        setState(() => _isLoading = false);
+        return;
+      }
+
       final dir = Directory(_currentDir);
       if (!await dir.exists()) {
         if (mounted) {
@@ -226,13 +357,22 @@ class _FilePageState extends State<FilePage> {
   /// [dirPath] 目标目录路径
   void _navigateTo(String dirPath) {
     setState(() {
-      _currentDir = dirPath;
+      _currentDir = _resolveSpecialPath(dirPath);
     });
     _loadDirectory();
   }
 
   /// 导航到父目录
   void _navigateToParent() {
+    if (Platform.isWindows) {
+      // 如果当前在某个驱动器根目录，导航到特殊根
+      if (_currentDir.endsWith('\\') && _currentDir.length == 3) {
+        // 例如 "C:\"，长度为3
+        setState(() => _currentDir = _winRoot);
+        _loadDirectory();
+        return;
+      }
+    }
     final parent = p.dirname(_currentDir);
     if (parent != _currentDir) {
       _navigateTo(parent);
@@ -412,23 +552,38 @@ class _FilePageState extends State<FilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildPathBar(),
-        _buildToolBar(),
-        Expanded(child: _buildFileList()),
-        if (_selectedPaths.isNotEmpty) _buildBottomBar(),
-      ],
+    // ignore: deprecated_member_use
+    return WillPopScope(
+      onWillPop: () async {
+        // 如果是 Android 或 Windows 平台
+        if (Platform.isAndroid || Platform.isWindows) {
+          // 检查是否在根目录
+          if ((Platform.isAndroid && _currentDir == '/sdcard') ||
+              (Platform.isWindows && _currentDir == _winRoot)) {
+            // 在根目录时不允许返回
+            Fluttertoast.showToast(msg: '已到达根目录');
+            return false;
+          }
+          // 否则导航到父目录
+          _navigateToParent();
+          return false;
+        }
+        // 其他平台默认行为
+        return true;
+      },
+      child: Column(
+        children: [
+          _buildPathBar(),
+          _buildToolBar(),
+          Expanded(child: _buildFileList()),
+          if (_selectedPaths.isNotEmpty) _buildBottomBar(),
+        ],
+      ),
     );
   }
 
   /// 构建路径栏
   Widget _buildPathBar() {
-    final parts = _currentDir
-        .split(Platform.pathSeparator)
-        .where((p) => p.isNotEmpty)
-        .toList();
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
       child: GlassContainer(
@@ -438,45 +593,35 @@ class _FilePageState extends State<FilePage> {
         padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
         child: Row(
           children: [
-            GestureDetector(
-              onTap: _navigateToParent,
-              child: const Icon(Icons.arrow_upward, size: 20),
-            ),
-            const SizedBox(width: 8),
+            // 在特殊根目录时不显示上一级按钮
+            if (!(Platform.isWindows && _currentDir == _winRoot))
+              GestureDetector(
+                onTap: _navigateToParent,
+                child: const Icon(Icons.arrow_upward, size: 20),
+              ),
+            if (!(Platform.isWindows && _currentDir == _winRoot))
+              const SizedBox(width: 8),
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    GestureDetector(
-                      onTap: () => _navigateTo('/'),
-                      child: Text(
-                        '/ ',
+                    // Windows 特殊根目录
+                    if (Platform.isWindows && _currentDir == _winRoot)
+                      Text(
+                        '此电脑',
                         style: TextStyle(
                           fontFamily: 'MapleMono',
                           fontSize: 13,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
                         ),
-                      ),
-                    ),
-                    for (int i = 0; i < parts.length; i++)
-                      GestureDetector(
-                        onTap: () {
-                          final subPath =
-                              '/${parts.sublist(0, i + 1).join('/')}';
-                          _navigateTo(subPath);
-                        },
-                        child: Text(
-                          '${parts[i]} ${i < parts.length - 1 ? '/ ' : ''}',
-                          style: TextStyle(
-                            fontFamily: 'MapleMono',
-                            fontSize: 13,
-                            color: i == parts.length - 1
-                                ? Theme.of(context).textTheme.bodyMedium?.color
-                                : Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ),
+                      )
+                    // Windows 普通路径
+                    else if (Platform.isWindows)
+                      ..._buildWindowsPathParts()
+                    // Linux/Mac 路径
+                    else
+                      ..._buildUnixPathParts(),
                   ],
                 ),
               ),
@@ -485,6 +630,94 @@ class _FilePageState extends State<FilePage> {
         ),
       ),
     );
+  }
+
+  /// 构建 Windows 路径栏部分
+  List<Widget> _buildWindowsPathParts() {
+    final parts = _currentDir
+        .split(Platform.pathSeparator)
+        .where((p) => p.isNotEmpty)
+        .toList();
+    final widgets = <Widget>[];
+
+    for (int i = 0; i < parts.length; i++) {
+      final part = parts[i];
+      final isLast = i == parts.length - 1;
+
+      // 构建到当前部分的完整路径
+      final String subPath;
+      if (i == 0) {
+        // 驱动器部分，如 C: -> C:\
+        subPath = '$part\\';
+      } else {
+        subPath = parts.sublist(0, i + 1).join('\\') + '\\';
+      }
+
+      widgets.add(
+        GestureDetector(
+          onTap: isLast ? null : () => _navigateTo(subPath),
+          child: Text(
+            '$part${isLast ? '' : ' \\ '}',
+            style: TextStyle(
+              fontFamily: 'MapleMono',
+              fontSize: 13,
+              color: isLast
+                  ? Theme.of(context).textTheme.bodyMedium?.color
+                  : Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  /// 构建 Unix(Linux/Mac) 路径栏部分
+  List<Widget> _buildUnixPathParts() {
+    final parts = _currentDir
+        .split(Platform.pathSeparator)
+        .where((p) => p.isNotEmpty)
+        .toList();
+    final widgets = <Widget>[];
+
+    widgets.add(
+      GestureDetector(
+        onTap: () => _navigateTo('/'),
+        child: Text(
+          '/ ',
+          style: TextStyle(
+            fontFamily: 'MapleMono',
+            fontSize: 13,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      ),
+    );
+
+    for (int i = 0; i < parts.length; i++) {
+      final part = parts[i];
+      final isLast = i == parts.length - 1;
+      final subPath = '/${parts.sublist(0, i + 1).join('/')}';
+
+      widgets.add(
+        GestureDetector(
+          onTap: isLast ? null : () => _navigateTo(subPath),
+          child: Text(
+            '$part${isLast ? '' : ' / '}',
+            style: TextStyle(
+              fontFamily: 'MapleMono',
+              fontSize: 13,
+              color: isLast
+                  ? Theme.of(context).textTheme.bodyMedium?.color
+                  : Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return widgets;
   }
 
   /// 构建工具栏
@@ -617,6 +850,39 @@ class _FilePageState extends State<FilePage> {
   Widget _buildFileTile(_FileEntry entry, bool isSelected) {
     final isSelectable = _isSelectableExtension(entry.path);
     final isLrc = p.extension(entry.path).toLowerCase() == '.lrc';
+    final isWinDrive = Platform.isWindows && entry.path.endsWith('\\');
+
+    // 获取特殊固定项的图标
+    IconData getSpecialIcon() {
+      switch (entry.path) {
+        case '::DESKTOP::':
+          return Icons.desktop_windows;
+        case '::DOCUMENTS::':
+          return Icons.description;
+        case '::DOWNLOADS::':
+          return Icons.download;
+        case '::MUSIC::':
+          return Icons.music_note;
+        default:
+          return Icons.folder;
+      }
+    }
+
+    // 获取特殊固定项的图标颜色
+    Color getSpecialColor() {
+      switch (entry.path) {
+        case '::DESKTOP::':
+          return Colors.blue;
+        case '::DOCUMENTS::':
+          return Colors.indigo;
+        case '::DOWNLOADS::':
+          return Colors.green;
+        case '::MUSIC::':
+          return Colors.purple;
+        default:
+          return Colors.amber;
+      }
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 2.0),
@@ -670,13 +936,21 @@ class _FilePageState extends State<FilePage> {
                     if (_multiSelectMode && !entry.isDirectory)
                       const SizedBox(width: 8),
                     Icon(
-                      entry.isDirectory
-                          ? Icons.folder
-                          : _getFileIcon(entry.path),
+                      isWinDrive
+                          ? Icons.storage
+                          : (entry.path.startsWith('::')
+                                ? getSpecialIcon()
+                                : (entry.isDirectory
+                                      ? Icons.folder
+                                      : _getFileIcon(entry.path))),
                       size: 22,
-                      color: entry.isDirectory
-                          ? Colors.amber
-                          : _getFileIconColor(entry.path),
+                      color: isWinDrive
+                          ? Colors.blue
+                          : (entry.path.startsWith('::')
+                                ? getSpecialColor()
+                                : (entry.isDirectory
+                                      ? Colors.amber
+                                      : _getFileIconColor(entry.path))),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

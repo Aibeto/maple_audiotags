@@ -2367,33 +2367,7 @@ class _TagEditorUIState extends State<TagEditorUI>
               }
             },
           ),
-          // const SizedBox(height: 16),
-          // 左上角返回按钮
-          // Positioned(
-          //   top: MediaQuery.of(context).padding.top + 16, // 更靠近顶部
-          //   left: 12.0,
-          //   child: LiquidGlassLayer(
-          //     settings: UIConfig.smallButtonSettings,
-          //     child: LiquidGlass.inLayer(
-          //       shape: LiquidRoundedRectangle(
-          //         borderRadius: const Radius.circular(20.0),
-          //       ),
-          //       child: SizedBox(
-          //         width: 40.0,
-          //         height: 40.0,
-          //         child: FloatingActionButton(
-          //           onPressed: () {
-          //             Navigator.of(context).pop();
-          //           },
-          //           mini: true,
-          //           backgroundColor: Colors.transparent,
-          //           elevation: 0,
-          //           child: const Icon(Icons.arrow_back),
-          //         ),
-          //       ),
-          //     ),
-          //   ),
-          // ),
+
           // 右上角操作按钮组
           Positioned(
             top: MediaQuery.of(context).padding.top + 16,
